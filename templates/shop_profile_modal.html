@@ -1,0 +1,55 @@
+<!-- Shop Profile Sidebar (Included in Base) -->
+<div id="shopProfileSidebar" class="sidebar-overlay" onclick="toggleModal('shopProfileSidebar')">
+
+    <div class="sidebar-panel" onclick="event.stopPropagation()">
+
+        <div
+            style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+            <div>
+                <h3 style="font-size: 1.5rem; font-weight: 600; color: var(--text-primary);">{{ shop.shop_name }}</h3>
+                <p style="color: var(--text-secondary);">Shop Profile</p>
+            </div>
+            <button onclick="toggleModal('shopProfileSidebar')"
+                style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);">&times;</button>
+        </div>
+
+        <div style="margin-bottom: 2rem;">
+            <label
+                style="display: block; color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.25rem;">Address</label>
+            <div style="font-size: 1.1rem; color: var(--text-primary); font-weight: 500;">
+                {{ shop.address|default:"No address set" }}
+            </div>
+        </div>
+
+        <div style="margin-bottom: 2rem;">
+            <label
+                style="display: block; color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.25rem;">Contact</label>
+            <div style="font-size: 1.1rem; color: var(--text-primary); font-weight: 500;">
+                {{ shop.mobile|default:"No contact set" }}
+            </div>
+        </div>
+
+        {% if shop.gst_no %}
+        <div style="margin-bottom: 2rem;">
+            <label style="display: block; color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.25rem;">GST
+                Reg. No</label>
+            <div style="font-size: 1.1rem; color: var(--text-primary); font-weight: 500;">
+                {{ shop.gst_no }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Right: Buttons -->
+        <div style="flex-grow: 1;">
+            <a href="#" class="btn btn-outline d-block"
+                style="width: 100%; justify-content: center; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                <i class="fa-solid fa-pen-to-square" style="margin-right: 6px;"></i> Edit
+            </a>
+
+            <a href="#" class="btn btn-primary d-block"
+                style="width: 100%; justify-content: center; font-size: 0.85rem;">
+                <i class="fa-solid fa-file-invoice" style="margin-right: 6px;"></i> Bills
+            </a>
+        </div>
+    </div>
+</div>

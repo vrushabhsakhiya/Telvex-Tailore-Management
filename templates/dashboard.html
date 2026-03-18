@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<style>
+    .urgent-card {
+        margin-bottom: 2rem;
+        border-left: 5px solid var(--danger-color);
+        margin-top: 2rem;
+    }
+</style>
+<!-- Upper Row: Yearly & Key Stats -->
+<h3 style="margin-bottom: 1rem; color: var(--text-primary);">Lifetime Overview</h3>
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="card stat-card">
+        <h3>Total Revenue</h3>
+        <div class="stat-value">₹{{ stats.total_revenue|intcomma }}</div>
+        <div class="stat-trend positive"><i class="fa-solid fa-chart-line"></i> All Time</div>
+    </div>
+    <div class="card stat-card">
+        <h3>Pending Balance</h3>
+        <div class="stat-value">₹{{ stats.pending_balance|intcomma }}</div>
+        <div class="stat-trend warning"><i class="fa-solid fa-clock"></i> Outstanding</div>
+    </div>
+    <div class="card stat-card">
+        <h3>Monthly Sales</h3>
+        <div class="stat-value">₹{{ stats.monthly_revenue|intcomma }}</div>
+        <div class="stat-trend positive"><i class="fa-solid fa-calendar-check"></i> This Month</div>
+    </div>
+    <div class="card stat-card">
+        <h3>Pending Delivery</h3>
+        <div class="stat-value">{{ stats.pending_delivery }}</div>
+        <div class="stat-trend info"><i class="fa-solid fa-scissors"></i> In Progress</div>
+    </div>
+</div>
+
+<!-- Advanced Analytics Row -->
+<div class="grid-layout-middle" style="margin-top: 2rem;">
+    <!-- Sales Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Revenue Trend (Last 6 Months)</div>
+        </div>
+        <div style="height: 300px; padding: 1rem;">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Top Customers -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Top Customers</div>
+        </div>
+        <div class="list-group" style="padding: 1rem;">
+            {% for entry in top_customers %}
+            {% with cust=entry.0 spend=entry.1 %}
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 32px; height: 32px; background: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem;">
+                        {{ cust.name.0 }}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9rem;">{{ cust.name }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">{{ cust.mobile }}</div>
+                    </div>
+                </div>
+                <div style="font-weight: 700; color: var(--primary-color);">₹{{ spend|intcomma }}</div>
+            </div>
+            {% endwith %}
+            {% empty %}
+            <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No data yet</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="grid-layout-middle" style="margin-top: 2rem;">
+    <!-- Upcoming Deliveries -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Upcoming Deliveries</div>
+            <a href="{% url 'reminders' %}" style="font-size: 0.8rem; color: var(--primary-color); text-decoration: none;">View All</a>
+        </div>
+        <div class="list-group" style="padding: 1rem;">
+            {% for order in upcoming_deliveries %}
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color);">
+                <div>
+                    <div style="font-weight: 600; font-size: 0.9rem;">{{ order.customer.name }}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Due: {{ order.delivery_date|date:"d M, Y" }}</div>
+                </div>
+                <span class="badge" style="background: #fef3c7; color: #92400e;">{{ order.work_status }}</span>
+            </div>
+            {% empty %}
+            <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No upcoming deliveries</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Today's Registrations</div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th style="text-align: right;">Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in todays_orders %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ order.customer.name }}</td>
+                        <td style="text-align: right; color: var(--text-secondary);">{{ order.created_at|date:"h:i A" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="2" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No orders today</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Urgent Reminders Widget (New) -->
+{% if urgent_reminders %}
+<div class="card urgent-card">
+    <div class="card-header" style="padding-bottom: 0.5rem; justify-content: flex-start; gap: 0.5rem;">
+        <i class="fa-solid fa-bell" style="color: var(--danger-color);"></i>
+        <div class="card-title" style="color: var(--danger-color); font-size: 1rem;">Urgent Reminders </div>
+    </div>
+    <div class="reminder-scroller" style="max-height: 150px; overflow-y: auto;">
+        {% for rem in urgent_reminders %}
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid rgba(0,0,0,0.05);">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div
+                    style="--rem-color: {{ rem.color }}; width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 1px solid var(--rem-color); color: var(--rem-color); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fa-solid {{ rem.icon }}"></i>
+                </div>
+                <div>
+                    <strong style="display: block; font-size: 0.95rem;">{{ rem.title }}</strong>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">{{ rem.desc }}</span>
+                </div>
+            </div>
+            <div>
+                <a href="{{ rem.link }}" class="btn btn-sm btn-outline"
+                    style="font-size: 0.75rem; border-color: var(--border-color); color: var(--text-primary);">View</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Content moved above -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        const revenueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [{% for entry in revenue_trend %}'{{ entry.month|date:"M Y" }}',{% endfor %}],
+                datasets: [{
+                    label: 'Revenue (₹)',
+                    data: [{% for entry in revenue_trend %}{{ entry.total }},{% endfor %}],
+                    borderColor: '#4f46e5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#4f46e5'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { borderDash: [5, 5] },
+                        ticks: { callback: value => '₹' + value }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    });
+
+    // Auto-refresh stats occasionally
+    setInterval(function () {
+        if (!document.hidden) {
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newStats = doc.querySelector('.stats-grid');
+                    const oldStats = document.querySelector('.stats-grid');
+                    if (newStats && oldStats) oldStats.innerHTML = newStats.innerHTML;
+                });
+        }
+    }, 30000); 
+</script>
+
+<style>
+    /* Responsive adjustment for dashboard grids */
+    @media (max-width: 768px) {
+
+        /* Stack everything on mobile */
+        .grid-layout-middle,
+        .stats-grid {
+            grid-template-columns: 1fr !important;
+            gap: 1rem !important;
+        }
+    }
+</style>
+{% endblock %}

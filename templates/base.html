@@ -1,0 +1,433 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taivex | Conquer Fits</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- PWA Manifest & Meta -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <meta name="theme-color" content="#4338CA">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=4">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Theme Init (Prevent Flash) -->
+    <script>
+        (function () {
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
+            }
+        })();
+    </script>
+    <!-- Critical Dark Mode CSS to prevent Flash -->
+    <style>
+        html.dark-mode {
+            background-color: #111827; /* Tailwind gray-900 match */
+            color: #f3f4f6;
+        }
+        html.dark-mode body {
+            background-color: #111827;
+            color: #f3f4f6;
+        }
+    </style>
+    <style>
+        /* Utilities */
+        .d-none {
+            display: none !important;
+        }
+
+        .d-block {
+            display: block !important;
+        }
+
+        /* Avatar Utilities */
+        .avatar-base {
+            width: 40px;
+            height: 40px;
+            overflow: hidden;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        /* Alert Styles */
+        .alert-success {
+            background: #DCFCE7;
+            color: #166534;
+            border: 1px solid #BBF7D0;
+        }
+
+        .alert-error,
+        .alert-danger {
+            background: #FEE2E2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+
+        .alert-warning {
+            background: #FEF3C7;
+            color: #92400E;
+            border: 1px solid #FDE68A;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        (function() {
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        })();
+        // Global CSRF Token for JS
+        globalThis.CSRF_TOKEN = "{{ csrf_token }}";
+    </script>
+    <div class="app-container {% if request.GET.ui_only %}ui-only-mode{% endif %}">
+        <!-- Mobile Nav Overlay -->
+        <div class="nav-overlay" id="navOverlay"></div>
+
+        <!-- Sidebar -->
+        {% if not request.GET.ui_only %}
+        <aside class="sidebar">
+            <div class="brand"
+                style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 2rem 1.5rem; min-height: 80px;">
+                <div class="header-brand-icon" style="display: flex; align-items: center; justify-content: center;">
+                    <!-- Tailoring Icon SVG -->
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        style="color: var(--primary-color);">
+                        <path
+                            d="M16 4C17.1046 4 18 4.89543 18 6C18 7.10457 17.1046 8 16 8C14.8954 8 14 7.10457 14 6C14 4.89543 14.8954 4 16 4Z"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path
+                            d="M6 4C7.10457 4 8 4.89543 8 6C8 7.10457 7.10457 8 6 8C4.89543 8 4 7.10457 4 6C4 4.89543 4.89543 4 6 4Z"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M14.5 9L9.5 14L8 12.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M9.5 9L14.5 14L16 12.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M6 8L8 12.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M16 8L14 12.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <circle cx="12" cy="19" r="2" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                    <span
+                        style="font-weight: 600; margin-left: 0.5rem; color: var(--text-primary); font-size: 1.1rem;">Taivex
+                        Pro</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav" style="overflow-y: auto;">
+                <a href="{% url 'dashboard' %}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{% url 'customers' %}" class="nav-item {% if active_page == 'customers' %}active{% endif %}">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Customers</span>
+                </a>
+                <a href="{% url 'orders' %}" class="nav-item {% if active_page == 'orders' %}active{% endif %}">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span>Orders</span>
+                </a>
+                <a href="{% url 'bills' %}" class="nav-item {% if active_page == 'bills' %}active{% endif %}">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                    <span>Bills</span>
+                </a>
+                <a href="{% url 'measurements' %}"
+                    class="nav-item {% if active_page == 'measurements' %}active{% endif %}">
+                    <i class="fa-solid fa-ruler"></i>
+                    <span>Measurements</span>
+                </a>
+                <a href="{% url 'reminders' %}" class="nav-item {% if active_page == 'reminders' %}active{% endif %}">
+                    <i class="fa-regular fa-clock"></i>
+                    <span>Reminders</span>
+                </a>
+
+                {% if not staff_name %}
+                <a href="{% url 'categories' %}"
+                    class="nav-item {% if active_page == 'custom_categories' %}active{% endif %}">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <span>Category</span>
+                </a>
+                <a href="{% url 'settings' %}" class="nav-item {% if active_page == 'settings' %}active{% endif %}">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Settings</span>
+                </a>
+                {% endif %}
+
+            </nav>
+
+
+
+            <div class="user-profile-mini" {% if not staff_name %}onclick="window.location.href='{% url 'settings' %}'" style="cursor: pointer;"{% endif %}>
+                <div class="avatar"
+                    style="background: var(--primary-color); overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    {% if shop and shop.logo %}
+                    <img src="{% if '/media/' in shop.logo %}{{ shop.logo }}{% else %}/media/{{ shop.logo }}{% endif %}"
+                        alt="Shop Logo" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                    <i class="fa-solid fa-store"></i>
+                    {% endif %}
+                </div>
+                <div class="info">
+                    <div class="name" style="font-size: 0.95rem; font-weight: 600;">
+                        {{ shop.shop_name|default:'My Shop' }}
+                    </div>
+                    {% if staff_name %}
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">
+                        {{ staff_name }} ({{ staff_role }})
+                    </div>
+                    {% else %}
+                    <div id="timeGreeting" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">
+                        Hello,</div>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+        {% endif %}
+
+        <!-- Main Content -->
+        <main class="main-content" {% if request.GET.ui_only %}style="margin-left: 0; width: 100%;"{% endif %}>
+            <!-- Top Header -->
+            {% if not request.GET.ui_only %}
+            <header class="top-header">
+                <!-- Left: Mobile Menu Toggle -->
+                <button class="mobile-menu-toggle" id="menuToggle">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
+                <!-- Brand -->
+                <div class="header-brand-icon" style="display: flex; align-items: center; gap: 0.75rem;">
+                    {% if shop and shop.logo %}
+                    <img src="{% if '/media/' in shop.logo %}{{ shop.logo }}{% else %}/media/{{ shop.logo }}{% endif %}"
+                        alt="Shop Logo" style="width: 40px; height: 40px; object-fit: cover; border-radius: 8px;">
+                    {% else %}
+                    <div
+                        style="width: 40px; height: 40px; background: var(--secondary-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                    {% endif %}
+                    <span style="font-weight: 700; font-size: 1.25rem; color: var(--text-primary);">
+                        {{ shop.shop_name|default:'My Shop' }}
+                    </span>
+                </div>
+
+                <!-- Global Search (Removed as per request) -->
+                <div style="flex: 1;"></div>
+
+                <!-- Right: Actions (Language & Theme) -->
+                <div class="header-actions" style="display: flex; align-items: center; gap: 1rem;">
+
+
+                    <!-- Hidden Google Widget -->
+                    <div id="google_translate_element" style="display: none;"></div>
+                    
+                    <button class="theme-toggle" id="themeToggle">
+                        <i class="fa-regular fa-moon"></i>
+                    </button>
+                    <!-- Logout added for convenience -->
+                    <a href="{% url 'logout' %}" style="color: var(--text-secondary); margin-left: 0.5rem;"><i
+                            class="fa-solid fa-right-from-bracket"></i></a>
+                </div>
+            </header>
+            {% endif %}
+
+            <!-- Page Content -->
+            <div class="content-wrapper">
+                <!-- Flash Messages -->
+                {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 1.5rem;">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}"
+                        style="padding: 1rem; border-radius: 0.375rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.75rem;">
+
+                        {% if message.tags == 'success' %}<i class="fa-solid fa-circle-check"></i>{% endif %}
+                        {% if message.tags == 'error' or message.tags == 'danger' %}<i
+                            class="fa-solid fa-circle-exclamation"></i>
+                        {% endif %}
+                        {% if message.tags == 'warning' %}<i class="fa-solid fa-triangle-exclamation"></i>{% endif %}
+
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </div>
+
+            {% if request.GET.ui_only %}
+            <!-- Floating Exit Button for UI Only Mode -->
+            <div style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; gap: 10px;">
+                <button onclick="window.history.back()" class="btn btn-outline" style="background: var(--card-bg); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid var(--border-color); border-radius: 50px; padding: 0.75rem 1.25rem;">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+                <a href="{{ request.path }}" class="btn btn-primary" style="box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); border-radius: 50px; padding: 0.75rem 1.25rem;">
+                    <i class="fa-solid fa-compress"></i> Exit Full UI
+                </a>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Mobile Sidebar Toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.querySelector('.sidebar');
+        const navOverlay = document.getElementById('navOverlay');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            navOverlay.classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('active');
+            navOverlay.classList.remove('active');
+        }
+
+        if (menuToggle) {
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent immediate closing if bubbling
+                toggleSidebar();
+            });
+        }
+
+        if (navOverlay) {
+            navOverlay.addEventListener('click', closeSidebar);
+        }
+
+        // Optional: Close sidebar on link click (for better mobile UX)
+        const navLinks = document.querySelectorAll('.nav-item');
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    closeSidebar();
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Theme Toggle with Persistence
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                const themeIcon = themeToggle.querySelector('i');
+
+                // 1. Check LocalStorage on Load
+                const currentTheme = localStorage.getItem('theme');
+                if (currentTheme === 'dark') {
+                    // Ensure classes are present on both (Head script handled HTML, Body script handled Body)
+                    if (!document.documentElement.classList.contains('dark-mode')) {
+                         document.documentElement.classList.add('dark-mode');
+                    }
+                    if (!document.body.classList.contains('dark-mode')) {
+                         document.body.classList.add('dark-mode');
+                    }
+                    
+                    // Update Icon
+                    if (themeIcon) {
+                        themeIcon.classList.remove('fa-moon');
+                        themeIcon.classList.add('fa-sun');
+                    }
+                }
+
+                // 2. Toggle & Save
+                themeToggle.addEventListener('click', () => {
+                    document.body.classList.toggle('dark-mode');
+                    document.documentElement.classList.toggle('dark-mode');
+
+                    // UI Update
+                    const isDark = document.body.classList.contains('dark-mode');
+                    if (isDark) {
+                        if (themeIcon) {
+                            themeIcon.classList.remove('fa-moon');
+                            themeIcon.classList.add('fa-sun');
+                        }
+                        localStorage.setItem('theme', 'dark');
+                    } else {
+                        if (themeIcon) {
+                            themeIcon.classList.remove('fa-sun');
+                            themeIcon.classList.add('fa-moon');
+                        }
+                        localStorage.setItem('theme', 'light');
+                    }
+                });
+            } else {
+                console.error("Theme toggle button not found!");
+            }
+        });
+        // Time-based Greeting
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            const greetingElem = document.getElementById('timeGreeting');
+            let greeting;
+
+            if (hour >= 5 && hour < 12) greeting = 'Good Morning';
+            else if (hour >= 12 && hour < 17) greeting = 'Good Afternoon';
+            else if (hour >= 17 && hour < 22) greeting = 'Good Evening';
+            else greeting = 'Good Night';
+
+            if (greetingElem) greetingElem.textContent = greeting + ',';
+        }
+        updateGreeting();
+
+        // Auto-dismiss Flash Messages
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.flash-messages .alert');
+            alerts.forEach(alert => {
+                alert.style.transition = 'opacity 0.5s ease';
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 500);
+            });
+        }, 2000); // 2 seconds delay
+
+        // Global Double-Submit Protection
+        document.addEventListener('submit', function (e) {
+            const form = e.target;
+            // distinct from ajax forms which might handle their own state
+            if (!form.classList.contains('no-disable')) {
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn && !btn.disabled) {
+                    btn.disabled = true;
+                    // Optional: Backup original text and show spinner
+                    const originalText = btn.innerHTML;
+                    btn.dataset.originalText = originalText;
+                    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing...';
+
+                    // Re-enable after 5 seconds timeout (safety net)
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }, 5000);
+                }
+            }
+        });
+    </script>
+
+    <!-- Shop Profile Modal Removed as per request -->
+    <!-- {% include 'shop_profile_modal.html' %} -->
+    <script src="{% static 'js/script.js' %}"></script>
+    <script src="{% static 'js/script.js' %}"></script>
+    <script src="{% static 'js/custom_scripts.js' %}?v=2"></script>
+</body>
+
+</html>

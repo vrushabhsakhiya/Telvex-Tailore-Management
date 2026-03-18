@@ -1,0 +1,683 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 2rem;">
+    <a href="{% url 'customer_measurement_history' customer.id %}"
+        style="text-decoration: none; color: var(--text-secondary); margin-bottom: 0.5rem; display: inline-block;">
+        <i class="fa-solid fa-arrow-left"></i> Back to Customer
+    </a>
+    <h2 style="font-size: 1.5rem; font-weight: 600;">Add Measurement for {{ customer.name }}</h2>
+</div>
+
+    <div class="measurement-layout" style="display: flex; gap: 2rem; align-items: flex-start;">
+        <!-- Left Column: Step Containers -->
+        <div class="main-form-area" style="flex: 1; min-width: 0;">
+            <!-- Step 1: Selection -->
+            <div id="step1" class="step-container" {% if reuse_measurement %}style="display: none;" {% endif %}>
+                <div style="margin-bottom: 1.5rem;">
+                    <span style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; display: inline-block;">Step 1 of 3</span>
+                    <h3 style="font-weight: 700; color: var(--text-primary); margin: 0;">Select Category ({{ customer.gender|title }})</h3>
+                </div>
+
+                <!-- Categories (Dynamic) -->
+                <div class="category-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1.25rem;">
+                    {% for cat in categories %}
+                    <button class="cat-card hover-shadow" onclick="selectCategoryFromData(this)" data-id="{{ cat.id }}" data-name="{{ cat.name }}" style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem 1rem; text-align: center; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;">
+                        <span style="width: 48px; height: 48px; background: rgba(var(--text-secondary-rgb), 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 1.5rem; transition: 0.3s;" class="cat-icon-bg">
+                            {% if 'fa-' in cat.icon %}<i class="fa-solid {{ cat.icon }}"></i>{% else %}{{ cat.icon }}{% endif %}
+                        </span>
+                        <span style="font-weight: 600; color: var(--text-primary); font-size: 1.05rem;">{{ cat.name }}</span>
+                    </button>
+                    {% empty %}
+                    <div style="grid-column: 1 / -1; padding: 2rem; text-align: center; background: rgba(var(--text-secondary-rgb), 0.05); border-radius: 12px; border: 1px dashed var(--border-color);">
+                        <p style="color: var(--text-secondary); margin: 0;">No categories found for this gender. Please create one.</p>
+                    </div>
+                    {% endfor %}
+
+                    <!-- "Create Category" Card -->
+                    <button class="cat-card hover-shadow" onclick="addQuickCategory()" style="background: rgba(var(--primary-rgb), 0.02); border: 2px dashed var(--primary-color); border-radius: 12px; padding: 1.5rem 1rem; text-align: center; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;">
+                        <span style="width: 48px; height: 48px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem; transition: 0.3s;" class="cat-icon-create-bg">
+                            <i class="fa-solid fa-plus"></i>
+                        </span>
+                        <span style="font-weight: 700; color: var(--primary-color); font-size: 1.05rem;">Create Category</span>
+                    </button>
+                </div>
+
+                <style>
+                    .cat-card:hover { border-color: var(--primary-color) !important; transform: translateY(-4px); box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.15) !important; }
+                    .cat-card:hover .cat-icon-bg { background: var(--primary-color) !important; color: white !important; }
+                    .cat-card:hover .cat-icon-create-bg { transform: scale(1.1); box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.4); }
+                </style>
+            </div>
+
+            <!-- Step 2: Form -->
+            <div id="step2" class="step-container {% if reuse_measurement %}d-block{% else %}d-none{% endif %}">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem;">
+                    <div>
+                        <span style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; display: inline-block;">Step 2 of 3</span>
+                        <h3 id="formTitle" style="font-weight: 700; color: var(--text-primary); margin: 0; font-size: 1.5rem;">
+                            {% if reuse_measurement %}
+                            Reuse Measurement
+                            {% else %}
+                            Measurements
+                            {% endif %}
+                        </h3>
+                    </div>
+                    {% if not reuse_measurement %}
+                    <button type="button" class="btn btn-sm" onclick="goToStep(1)" style="background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s;" onmouseover="this.style.borderColor='var(--text-secondary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                        <i class="fa-solid fa-arrow-left" style="margin-right: 0.4rem;"></i> Change Category
+                    </button>
+                    {% endif %}
+                </div>
+
+                <form method="POST" id="measurementForm" onsubmit="prepareSubmission(event)">
+                    {% csrf_token %}
+                    <input type="hidden" name="category_id" id="input_category_id"
+                        value="{{ reuse_measurement.category.id|default:'' }}">
+                    <input type="hidden" name="measurements_json" id="input_measurements_json" value=''>
+                    <input type="hidden" name="edit_index" value="{{ edit_index|default_if_none:'' }}">
+                    
+                    <!-- Flags for Action -->
+                    <input type="hidden" name="action_type" id="input_action_type" value="">
+
+                    <!-- Dynamic Fields Container -->
+                    <div id="dynamicFields" class="fields-grid {% if reuse_measurement %}d-none{% endif %}"
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                        <!-- Fields injected by JS -->
+                    </div>
+
+                    <!-- Reuse Summary (Non-Editable) -->
+                    {% if reuse_measurement %}
+                    <div
+                        style="background: var(--bg-color); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 2rem;">
+                        <h5 style="margin-bottom: 0.5rem; font-weight: 600;">Reusing Measurements: <span
+                                class="badge badge-primary">{{ reuse_measurement.category.name }}</span></h5>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            {% for k, v in reuse_measurement.measurements_json.items %}
+                            <span class="badge badge-secondary"
+                                style="background: var(--bg-color); color: var(--text-secondary); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; border: 1px solid var(--border-color);">
+                                {{ k }}: <strong>{{ v }}</strong>
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Add Custom Field Button -->
+                    <div style="margin-bottom: 2rem; text-align: right;" class="{% if reuse_measurement %}d-none{% endif %}">
+                        <button type="button" class="btn btn-sm btn-outline" onclick="addCustomField()"
+                            style="border: 1px dotted var(--primary-color); color: var(--primary-color);">
+                            <i class="fa-solid fa-plus"></i> Add Extra Field
+                        </button>
+                    </div>
+                    
+                    <!-- Item Price Field (For Aggregate Bill) -->
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="itemPriceInput">Item Price (approx) <span style="color:var(--text-secondary); font-weight: normal; font-size: 0.8em;">(Used for Bill Total)</span></label>
+                        <input type="number" name="item_price" id="itemPriceInput" class="form-control" placeholder="0.00" step="any" value="{{ edit_item.price|default:'' }}">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 2rem;">
+                        <label for="remarksInput">Remarks / Special Note</label>
+                        <textarea name="remarks" id="remarksInput" class="form-control"
+                            rows="3">{{ reuse_measurement.remarks|default:'' }}</textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; justify-content: flex-end; flex-wrap: wrap;">
+                        <!-- Add to Draft Button -->
+                        <button type="button" class="btn" onclick="submitDraft()"
+                            style="background-color: #ffc107; color: black; font-weight: 600;">
+                            {% if edit_index is not None %}
+                            <i class="fa-solid fa-pen"></i> Update Draft Item
+                            {% else %}
+                            <i class="fa-solid fa-plus"></i> Save & Add Another Item
+                            {% endif %}
+                        </button>
+                        
+                        <!-- NEW Save & Show Draft Button (Replaces the direct Order button) -->
+                        <button type="button" class="btn btn-primary" onclick="submitDraft()"
+                            style="min-width: 200px; justify-content: center; font-size: 1.1rem; opacity: 0.9;">
+                            <i class="fa-solid fa-save"></i> Save & View Bill Summary
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Sidebar Summary -->
+        <div class="draft-sidebar" style="width: 350px; flex-shrink: 0;">
+            {% if draft_cart %}
+            <div class="card" style="padding: 1.5rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; position: sticky; top: 100px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+                    <h4 style="margin: 0; font-weight: 700; font-size: 1.1rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="background: var(--primary-color); color: white; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 0.9rem;">
+                            <i class="fa-solid fa-receipt"></i>
+                        </span>
+                        Draft Bill Summary
+                    </h4>
+                    <span style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">
+                        {{ draft_cart|length }} Item{{ draft_cart|length|pluralize }}
+                    </span>
+                </div>
+                
+                <div class="draft-items-list" style="margin-bottom: 1.5rem; max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        {% for item in draft_cart reversed %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); transition: all 0.2s ease;" class="draft-item-card hover-shadow">
+                            
+                            <!-- Left: Info -->
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="color: var(--text-secondary); font-size: 0.75rem; font-weight: 700;">#{{ forloop.revcounter }}</span>
+                                    <span style="font-weight: 600; color: var(--text-primary); font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ item.category_name }}">{{ item.category_name }}</span>
+                                </div>
+                                <span style="font-weight: 800; color: var(--text-primary); font-size: 1rem;">₹{{ item.price|default:"0.00" }}</span>
+                            </div>
+
+                            <!-- Right: Actions -->
+                            <div style="display: flex; gap: 0.5rem; justify-content: flex-end; align-items: center; margin-left: 1rem;">
+                                <a href="{% url 'add_measurement' customer.id %}?reuse_id={{ item.measurement_id }}&edit_index={{ forloop.revcounter0 }}" 
+                                   title="Edit" style="color: var(--text-secondary); background: var(--bg-color); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; text-decoration: none; border: 1px solid var(--border-color); transition: 0.2s;" onmouseover="this.style.color='var(--primary-color)'; this.style.borderColor='var(--primary-color)';" onmouseout="this.style.color='var(--text-secondary)'; this.style.borderColor='var(--border-color)';">
+                                    <i class="fa-solid fa-pen" style="font-size: 0.85rem;"></i>
+                                </a>
+                                <a href="{% url 'remove_draft_item' forloop.revcounter0 %}?customer_id={{ customer.id }}" 
+                                   title="Remove" style="color: var(--text-secondary); background: var(--bg-color); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; text-decoration: none; border: 1px solid var(--border-color); transition: 0.2s;" onmouseover="this.style.color='#dc2626'; this.style.background='#fef2f2'; this.style.borderColor='#fca5a5';" onmouseout="this.style.color='var(--text-secondary)'; this.style.background='var(--bg-color)'; this.style.borderColor='var(--border-color)';"
+                                   onclick="return confirm('Remove {{ item.category_name }} from draft bill?')">
+                                    <i class="fa-solid fa-trash" style="font-size: 0.85rem;"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div style="background: rgba(var(--primary-rgb), 0.05); padding: 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 600; color: var(--text-secondary); font-size: 0.95rem;">Est. Total</span>
+                    <span style="font-weight: 800; color: var(--primary-color); font-size: 1.5rem;">₹{{ draft_total|default:"0.00" }}</span>
+                </div>
+
+                <button class="btn btn-primary" onclick="triggerOrderModalDirect()" 
+                        style="width: 100%; justify-content: center; padding: 0.85rem; font-weight: 600; font-size: 1rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.3);">
+                    Proceed to Checkout <i class="fa-solid fa-arrow-right" style="margin-left: 0.5rem; font-size: 0.85rem;"></i>
+                </button>
+            </div>
+
+            <style>
+                .draft-items-list::-webkit-scrollbar { width: 6px; }
+                .draft-items-list::-webkit-scrollbar-track { background: transparent; }
+                .draft-items-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+                .draft-item-card:hover { border-color: var(--primary-color); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+                [data-theme="dark"] .draft-item-card:hover { box-shadow: 0 4px 12px rgba(255,255,255,0.05); }
+            </style>
+
+            {% else %}
+            <div class="card" style="padding: 3rem 1.5rem; text-align: center; background: var(--bg-color); border: 2px dashed var(--border-color); border-radius: 12px; display: flex; flex-direction: column; align-items: center;">
+                <div style="width: 64px; height: 64px; background: rgba(var(--text-secondary-rgb), 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                    <i class="fa-solid fa-file-invoice" style="font-size: 1.5rem; color: var(--text-secondary);"></i>
+                </div>
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--text-primary); font-weight: 600;">Draft is Empty</h4>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0; max-width: 250px;">Select a measurement category from the left to start building a bill.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+<style>
+
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.375rem;
+        background: var(--bg-color);
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+
+    /* Mobile Improvements */
+    @media (max-width: 1024px) {
+        .measurement-layout {
+            flex-direction: column !important;
+        }
+        .draft-sidebar {
+            width: 100% !important;
+            order: -1; /* Show summary at top on mobile if needed, or keep at bottom */
+        }
+    }
+
+    @media (max-width: 768px) {
+        /* Stack Dynamic Fields */
+        #dynamicFields {
+            grid-template-columns: 1fr !important;
+            gap: 1rem !important;
+        }
+
+        /* Stack Modal Payment Fields */
+        #orderModal div[style*="grid-template-columns: 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>
+
+<script>
+    // Safely pass category data from Django to JavaScript
+    const categoryData = {};
+    {% for cat in categories %}
+    categoryData['{{ cat.id }}'] = {
+        name: '{{ cat.name|escapejs }}',
+        fields: [
+            {% for field in cat.fields_json %}"{{ field|escapejs }}",{% endfor %}
+        ]
+    };
+    {% endfor %}
+
+    // Draft total from server for auto-calculation
+    const serverDraftTotal = parseFloat("{{ draft_total|default:'0' }}") || 0;
+
+    function selectCategoryFromData(btn) {
+        const id = btn.dataset.id;
+        console.log("Category Button Clicked - ID:", id);
+        const data = categoryData[id];
+        if (data) {
+            selectCategory(id, data.name, data.fields);
+        } else {
+            console.warn("No data found for category ID:", id, "Available IDs:", Object.keys(categoryData));
+        }
+    }
+
+    // Add logic for button data-id binding in the loop above
+    document.addEventListener("DOMContentLoaded", () => {
+        // We already have onclick logic in HTML, just ensure dataset.id is correct.
+    });
+
+    async function addQuickCategory() {
+        if (confirm("To create a new category, please go to the Custom Categories page. Click OK to go there.")) {
+            window.location.href = "{% url 'categories' %}";
+        }
+    }
+
+    function selectCategory(id, name, fields) {
+        console.log("Selecting category:", name, fields);
+        try {
+            // Hide step 1
+            const step1 = document.getElementById('step1');
+            step1.style.display = 'none';
+            step1.classList.add('d-none');
+
+            // Show step 2
+            const step2 = document.getElementById('step2');
+            step2.style.display = 'block';
+            step2.classList.remove('d-none');
+            step2.classList.add('d-block');
+
+            document.getElementById('formTitle').innerText = name + ' Measurements';
+
+            // Set basic inputs
+            const idInput = document.getElementById('input_category_id');
+            if (idInput) idInput.value = id;
+
+            // Render Fields
+            const container = document.getElementById('dynamicFields');
+            if (container) {
+                container.innerHTML = '';
+                container.style.display = 'grid';
+                container.classList.remove('d-none');
+
+                if (Array.isArray(fields)) {
+                    fields.forEach(field => {
+                        const div = document.createElement('div');
+                        div.className = 'form-group';
+                        // Use textContent to safely handle names with special characters
+                        const safeFieldName = document.createTextNode(field).textContent;
+                        div.innerHTML = `
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">${safeFieldName} <span style="color:red">*</span></label>
+                            <input type="number" step="any" class="form-control measurement-input" 
+                                   data-field="${safeFieldName.replace(/"/g, '&quot;')}" 
+                                   oninput="this.value = this.value.replace(/[^0-9.]/g, '')" placeholder="0.00" required
+                                   style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary);">
+                        `;
+                        container.appendChild(div);
+                    });
+                }
+            }
+        } catch (err) {
+            console.error("Error in selectCategory:", err);
+            alert("Sorry, something went wrong while opening the measurement form. Please try again.");
+        }
+    }
+
+    function goToStep(step) {
+        if (step === 1) {
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+            
+            step2.style.display = 'none';
+            step2.classList.remove('d-block');
+            step2.classList.add('d-none');
+
+            step1.style.display = 'block';
+            step1.classList.remove('d-none');
+            step1.classList.add('d-block');
+        }
+    }
+
+    function prepareSubmission(e) {
+        // Gather all measurement inputs into JSON
+        const inputs = document.querySelectorAll('.measurement-input');
+        const data = {};
+        inputs.forEach(input => {
+            data[input.dataset.field] = input.value;
+        });
+
+        // If reusing, we might need to merge or handle differently?
+        // For now, if reusing, inputs might not exist (hidden).
+        // But if reusing, we normally don't re-submit measurement JSON unless editing?
+        // The view logic takes new JSON.
+        // If reusing, the template hides dynamic fields.
+        {% if reuse_measurement %}
+        // If reusing, we preserve the original JSON unless we allow editing.
+        // The python view logic for reuse?
+        // Actually, if 'reuse_measurement' context is set, we are likely creating a NEW measurement based on OLD one?
+        // Or just creating an Order?
+        // Usually "Reuse" means "Use these measurements for a new Order".
+        // So we should populate the form with old values and allow edit.
+        // In the original template, it shows a "Reuse Summary" and HIDES inputs?
+        // Let's populate the hidden JSON with reused data if inputs are empty.
+        // But better: If hidden inputs, we use the values rendered in hidden field.
+
+        // Wait, existing template had input_measurements_json value set by server if reuse.
+        // So if inputs are not present (hidden), we trust the hidden input value.
+        if (inputs.length > 0) {
+            document.getElementById('input_measurements_json').value = JSON.stringify(data);
+        } else {
+            // Do nothing, trust server rendered value
+        }
+        {% else %}
+        document.getElementById('input_measurements_json').value = JSON.stringify(data);
+        {% endif %}
+
+        return true;
+    }
+
+    function addCustomField() {
+        const name = prompt("Enter Custom Field Name (e.g., 'Bicep'):");
+        if (name && name.trim() !== "") {
+            const container = document.getElementById('dynamicFields');
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            div.innerHTML = `
+                <label>${name} <span style="color:red">*</span> <i class="fa-solid fa-xmark" style="font-size: 0.8em; color: red; cursor: pointer;" onclick="this.parentElement.parentElement.remove()"></i></label>
+                <input type="number" step="any" class="form-control measurement-input" data-field="${name}" 
+                       oninput="this.value = this.value.replace(/[^0-9.]/g, '')" placeholder="0.00" required>
+            `;
+            container.appendChild(div);
+        }
+    }
+
+    // Trigger Save & Order
+    // Submit as Draft
+    function submitDraft() {
+        if (!validateMeasurements()) return;
+        
+        document.getElementById('input_action_type').value = 'add_draft';
+        prepareSubmission(null);
+        document.getElementById('measurementForm').submit();
+    }
+
+    // Trigger Finish/Order Modal
+    function triggerOrderModal() {
+        // If Draft exists (checked via server rendered flag or UI check), we might skip validation if current is empty?
+        // But UX: Usually "Finish" means "Include Current form + Draft".
+        // Let's assume validation is required for the current form too.
+        if (!validateMeasurements()) return;
+
+        // Open Modal to get Order Details
+        toggleOrderModal();
+    }
+
+    // Direct Order Trigger from Sidebar (No current form validation)
+    function triggerOrderModalDirect() {
+        // Since we are finishing directly from the sidebar, we don't care about the current form inputs.
+        // We set id_action_type to finish_order and just submit.
+        // But we still need the Modal for payment details.
+        
+        // Mark that we are NOT including the current form in the final bill
+        const actionInput = document.getElementById('input_action_type');
+        actionInput.value = 'finish_order_direct'; // Custom flag for view if needed
+        
+        toggleOrderModal();
+    }
+
+    function validateMeasurements() {
+        const inputs = document.querySelectorAll('.measurement-input');
+        let isValid = true;
+
+        inputs.forEach(input => {
+            if (!input.value.trim()) {
+                input.style.borderColor = 'red';
+                isValid = false;
+            } else {
+                input.style.borderColor = ''; 
+            }
+        });
+
+        if (!isValid && inputs.length > 0) {
+            alert('Please fill all compulsory measurement fields (marked with *).');
+            return false;
+        }
+        return true;
+    }
+
+    function submitOrder() {
+        const form = document.getElementById('measurementForm');
+
+        // Add hidden inputs for Order Details
+        const fields = ['start_date', 'delivery_date', 'order_status', 'order_notes', 'total_amt', 'advance', 'payment_mode', 'created_by'];
+        fields.forEach(f => {
+            let el = document.getElementById('modal_' + f);
+            if (!el && f === 'created_by') {
+                el = document.getElementById('modal_created_by_input');
+            }
+            if (el) {
+                const val = el.value;
+                // Remove existing if any
+                const existing = form.querySelector(`input[name="${f}"]`);
+                if (existing) existing.remove();
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = f;
+                input.value = val;
+                form.appendChild(input);
+            }
+        });
+
+        const actionType = document.getElementById('input_action_type').value;
+        if (actionType !== 'finish_order_direct') {
+             document.getElementById('input_action_type').value = 'finish_order';
+             prepareSubmission(null);
+        } else {
+            // Direct submission mode - ensure measurement JSON is empty to avoid partial data
+            document.getElementById('input_measurements_json').value = '{}';
+        }
+
+        // Disable Button
+        const btn = document.querySelector('#orderModal .btn-primary');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+        }
+
+        form.submit();
+    }
+
+    const orderModalElement = document.getElementById('orderModal');
+    if (orderModalElement) {
+        orderModalElement.addEventListener('click', function() { toggleOrderModal(); });
+    }
+    const orderModalPanelElement = document.getElementById('orderModalPanel');
+    if (orderModalPanelElement) {
+        orderModalPanelElement.addEventListener('click', function(event) { event.stopPropagation(); });
+    }
+</script>
+
+<!-- Order Details Modal -->
+<div id="orderModal" class="sidebar-overlay">
+    <div id="orderModalPanel" class="sidebar-panel" style="display: flex; flex-direction: column;">
+        <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; position: relative;">
+            <button onclick="toggleOrderModal()" style="background: rgba(var(--text-secondary-rgb), 0.1); width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; border-radius: 50%; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-secondary); position: absolute; right: 0; top: 0; transition: 0.2s;" onmouseover="this.style.background='rgba(var(--text-secondary-rgb), 0.2)'" onmouseout="this.style.background='rgba(var(--text-secondary-rgb), 0.1)'" title="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <span style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; display: inline-block;">Step 3 of 3</span>
+            <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0; color: var(--text-primary);">Review & Checkout</h3>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label for="modal_start_date" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Start Date (Today)</label>
+            <input type="date" id="modal_start_date" class="form-control" readonly
+                style="background-color: var(--secondary-bg); cursor: not-allowed; opacity: 0.7;">
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label for="modal_delivery_date" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Delivery / Finish Date</label>
+            <input type="date" id="modal_delivery_date" class="form-control">
+        </div>
+
+        <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border-color);">
+        <h4 style="margin-bottom: 1rem; font-weight: 600; color: var(--primary-color);">Payment Details</h4>
+
+        <div style="margin-bottom: 1rem;">
+            <label for="modal_order_notes" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Order Notes / Instructions</label>
+            <textarea id="modal_order_notes" class="form-control" rows="2"
+                placeholder="Specific splicing instructions, etc."></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="margin-bottom: 1rem;">
+                <label for="modal_total_amt" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Total Amount (₹)</label>
+                <input type="number" id="modal_total_amt" class="form-control" placeholder="0.00" step="0.01">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label for="modal_advance" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Advance Paid (₹)</label>
+                <input type="number" id="modal_advance" class="form-control" placeholder="0.00" step="0.01">
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label for="modal_payment_mode" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Payment Mode</label>
+            <select id="modal_payment_mode" class="form-control">
+                <option value="Cash">Cash</option>
+                <option value="Online / UPI">Online / UPI</option>
+                <option value="Card">Card</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label for="modal_created_by" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Bill Created By</label>
+            {% if shop.bill_creators %}
+            <select id="modal_created_by" class="form-control">
+                {% for name in shop.bill_creators %}
+                <option value="{{ name }}">{{ name }}</option>
+                {% endfor %}
+            </select>
+            {% else %}
+            <input type="text" id="modal_created_by_input" class="form-control" name="modal_created_by" placeholder="System" value="System">
+            {% endif %}
+        </div>
+
+        <!-- Auto-set Status to Processing (Hidden) -->
+        <input type="hidden" id="modal_order_status" value="Processing">
+        <div style="margin-bottom: 1rem; color: var(--primary-color); font-weight: 500;">
+            Order Status: Processing (Auto)
+        </div>
+
+        <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <button onclick="submitOrder()" class="btn btn-primary"
+                style="width: 100%; justify-content: center; padding: 1rem; font-size: 1.1rem;">
+                Confirm & Create Order
+            </button>
+        </div>
+        <script>
+            function toggleOrderModal() {
+                const modal = document.getElementById('orderModal');
+                if (!modal.classList.contains('active')) {
+                    modal.style.display = 'flex';
+                    setTimeout(() => { modal.classList.add('active'); }, 10);
+
+                    // Auto-calculate Total Amount
+                    const itemPriceEl = document.getElementById('itemPriceInput');
+                    const currentItemPrice = itemPriceEl ? (parseFloat(itemPriceEl.value) || 0) : 0;
+                    
+                    const actionType = document.getElementById('input_action_type').value;
+                    let finalTotal = serverDraftTotal;
+                    
+                    // Only add current form price if we are not doing a direct finish from sidebar
+                    if (actionType !== 'finish_order_direct') {
+                        finalTotal += currentItemPrice;
+                    }
+
+                    const totalAmtInput = document.getElementById('modal_total_amt');
+                    if (totalAmtInput) {
+                        totalAmtInput.value = finalTotal.toFixed(2);
+                    }
+
+                    // Set default dates
+                    const today = new Date().toISOString().split('T')[0];
+
+                    // Set Start Date to Today and Readonly
+                    const startInput = document.getElementById('modal_start_date');
+                    if (startInput) startInput.value = today;
+
+                    // Set Delivery Date Min to Today
+                    const deliveryInput = document.getElementById('modal_delivery_date');
+                    if (deliveryInput) deliveryInput.min = today;
+
+                } else {
+                    modal.classList.remove('active');
+                    setTimeout(() => { modal.style.display = 'none'; }, 300);
+                }
+            }
+        </script>
+    </div>
+</div>
+
+        <style>
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+                justify-content: flex-end;
+            }
+
+            .sidebar-panel {
+                width: 100%;
+                max-width: 450px;
+                height: 100%;
+                background: var(--card-bg);
+                padding: 2rem;
+                box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1);
+                transform: translateX(100%);
+                transition: transform 0.3s ease-out;
+                overflow-y: auto;
+            }
+
+            .sidebar-overlay.active .sidebar-panel {
+                transform: translateX(0);
+            }
+        </style>
+        {% endblock %}

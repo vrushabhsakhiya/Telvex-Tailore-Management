@@ -1,0 +1,28 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Verify OTP{% endblock %}
+
+{% block content %}
+<h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; text-align: center;">Verify it's you</h2>
+<p style="text-align: center; color: #6B7280; font-size: 0.875rem; margin-bottom: 2rem;">
+    We've sent a 6-digit verification code to your email. Please enter it below.
+</p>
+
+<form action="{% url 'verify_otp' %}" method="POST">
+    {% csrf_token %}
+
+    <div class="form-group">
+        <label for="otp" class="form-label">Verification Code (OTP)</label>
+        <input type="text" id="otp" name="otp" class="form-input" placeholder="123456" required maxlength="6"
+            style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem; width: 100%;">
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+        Verify & Sign In
+    </button>
+</form>
+
+<div class="auth-footer">
+    Didn't receive code? <a href="{% url 'login' %}">Resend</a>
+</div>
+{% endblock %}

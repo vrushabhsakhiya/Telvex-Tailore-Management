@@ -1,0 +1,35 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Staff Login{% endblock %}
+
+{% block content %}
+<h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; text-align: center;">Staff Login</h2>
+<p style="text-align: center; color: #6B7280; font-size: 0.875rem; margin-bottom: 1.5rem;">Access your shop dashboard</p>
+
+<form action="{% url 'staff_login' %}" method="POST">
+    {% csrf_token %}
+
+    <div class="form-group">
+        <label for="shop_email" class="form-label">Shop Owner Email Address</label>
+        <input type="email" id="shop_email" name="shop_email" class="form-input" placeholder="shop@example.com" required>
+    </div>
+
+    <div class="form-group">
+        <label for="staff_name" class="form-label">Your Staff Name</label>
+        <input type="text" id="staff_name" name="staff_name" class="form-input" placeholder="John Doe" required>
+    </div>
+
+    <div class="form-group">
+        <label for="pin" class="form-label">Secret PIN</label>
+        <input type="password" id="pin" name="pin" class="form-input" placeholder="••••" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="background: var(--primary-color);">
+        Sign In as Staff <i class="fa-solid fa-arrow-right" style="margin-left: 0.5rem;"></i>
+    </button>
+</form>
+
+<div class="auth-footer" style="margin-top: 1.5rem; text-align: center;">
+    Are you the shop owner? <a href="{% url 'login' %}">Owner Login</a>
+</div>
+{% endblock %}

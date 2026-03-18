@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 2rem;">
+    <a href="{% url 'measurements' %}"
+        style="text-decoration: none; color: var(--text-secondary); margin-bottom: 0.5rem; display: inline-block;">
+        <i class="fa-solid fa-arrow-left"></i> Back to Measurements
+    </a>
+    <h2 style="font-size: 1.5rem; font-weight: 600;">Measurements History: {{ customer.name }}</h2>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Measurements</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in measurements %}
+                <tr>
+                    <td>{{ m.date|date:"d-M-Y" }}</td>
+                    <td>
+                        <span class="badge badge-primary">{{ m.category.name }}</span>
+                    </td>
+                    <td>
+                        <div
+                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem;">
+                            {% for key, value in m.measurements_json.items %}
+                            <div
+                                style="background: var(--bg-color); padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.9rem;">
+                                <span style="color: var(--text-secondary); font-size: 0.8em;">{{ key }}</span>
+                                <div style="font-weight: 600;">{{ value }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td>{{ m.remarks|default:'-' }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem;">No measurements found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

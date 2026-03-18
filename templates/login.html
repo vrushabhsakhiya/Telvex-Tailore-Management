@@ -1,0 +1,35 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; text-align: center;">Shop Owner Login</h2>
+<p style="text-align: center; color: #6B7280; font-size: 0.875rem; margin-bottom: 1.5rem;">Manage your tailor shop from anywhere</p>
+
+<form action="{% url 'login' %}" method="POST">
+    {% csrf_token %}
+
+    <div class="form-group">
+        <label for="email" class="form-label">Email Address</label>
+        <input type="email" id="email" name="username" class="form-input" placeholder="shop@example.com" required>
+    </div>
+
+    <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" id="password" name="password" class="form-input" placeholder="••••••••" required>
+        <div style="text-align: right; margin-top: 0.25rem;">
+            <a href="{% url 'forgot_password' %}" style="font-size: 0.75rem; color: var(--primary-color); text-decoration: none;">Forgot
+                password?</a>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+        Sign In <i class="fa-solid fa-arrow-right" style="margin-left: 0.5rem;"></i>
+    </button>
+</form>
+
+<div class="auth-footer">
+    New here? <a href="{% url 'register' %}">Register your shop</a><br>
+    Are you a staff member? <a href="{% url 'staff_login' %}">Staff Login</a>
+</div>
+{% endblock %}

@@ -1,0 +1,537 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 2rem; display: flex; justify-content: space-between;">
+    <h2 style="font-size: 1.5rem; font-weight: 600;">Orders</h2>
+    <!-- Auto-created from measurements now -->
+    <!-- Month navigation to be implemented properly, hiding for now or keeping static -->
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        <a href="?ui_only=1" class="btn btn-sm btn-outline" style="border: 1px solid var(--border-color); color: var(--text-secondary);">
+            <i class="fa-solid fa-expand"></i> Display Mode
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <form action="{% url 'orders' %}" method="GET" class="filter-bar"
+        style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 1rem; align-items: center;">
+
+        <!-- Search -->
+        <div style="position: relative; width: 100%;">
+            <i class="fa-solid fa-magnifying-glass"
+                style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary);"></i>
+            <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search Name or Mobile..."
+                style="width: 100%; padding: 0.75rem 0.75rem 0.75rem 2.5rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary);">
+        </div>
+
+        <!-- Gender Filter -->
+        <select name="gender" onchange="this.form.submit()"
+            style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary); cursor: pointer;">
+            <option value="">All Genders</option>
+            <option value="male" {% if request.GET.gender == 'male' %}selected{% endif %}>Male</option>
+            <option value="female" {% if request.GET.gender == 'female' %}selected{% endif %}>Female</option>
+        </select>
+
+        <!-- Work Status Filter -->
+        <select name="work_status" onchange="this.form.submit()"
+            style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary); cursor: pointer;">
+            <option value="">Work Status: All</option>
+            <option value="Pending" {% if request.GET.work_status == 'Pending' %}selected{% endif %}>Pending</option>
+            <option value="Processing" {% if request.GET.work_status == 'Processing' %}selected{% endif %}>Processing</option>
+            <option value="Ready" {% if request.GET.work_status == 'Ready' %}selected{% endif %}>Ready</option>
+            <option value="Delivered" {% if request.GET.work_status == 'Delivered' %}selected{% endif %}>Delivered</option>
+        </select>
+
+        <!-- Balance/Status Filter -->
+        <select name="status" onchange="this.form.submit()"
+            style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary); cursor: pointer;">
+            <option value="">Payment: All</option>
+            <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="paid" {% if request.GET.status == 'paid' %}selected{% endif %}>Paid</option>
+        </select>
+
+        <!-- Reset Button -->
+        {% if request.GET.q or request.GET.gender or request.GET.status or request.GET.work_status %}
+        <a href="{% url 'orders' %}" class="btn btn-outline"
+            style="border: 1px solid var(--border-color); padding: 0.75rem;">
+            <i class="fa-solid fa-xmark"></i>
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px; text-align: center;">#</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th style="text-align: center;">Work Status</th>
+                    <th style="text-align: center;">Payment</th>
+                    <th style="text-align: right;">Balance</th>
+                    <th style="text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr style="vertical-align: top;">
+                    <td style="text-align: center; color: var(--text-secondary); font-weight: 500;">{{ orders.start_index|add:forloop.counter0 }}</td>
+                    <td>
+                        <div style="font-weight: 600;">{{ order.customer.name }}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">{{ order.customer.mobile }}</div>
+                    </td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem; padding: 0.5rem 0;">
+                            {% for item in order.items %}
+                            <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-color); border: 1px solid var(--border-color); padding: 3px 8px; border-radius: 6px; width: fit-content;">
+                                <span style="font-weight: 700; color: var(--primary-color); background: rgba(59, 130, 246, 0.1); padding: 1px 6px; border-radius: 4px; font-size: 0.8rem;">{{ item.qty }}x</span>
+                                <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-primary); text-transform: capitalize;">{{ item.name }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </td>
+
+                    <td style="text-align: center;">
+                        {% if order.work_status == 'Pending' %}
+                        <span style="background: #f3f4f6; color: #374151; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: 1px solid #d1d5db; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-clock" style="font-size: 0.7rem;"></i> Pending
+                        </span>
+                        {% elif order.work_status == 'Processing' %}
+                        <span style="background: #dbeafe; color: #1e3a8a; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: 1px solid #bfdbfe; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-spinner fa-spin" style="font-size: 0.7rem;"></i> Processing
+                        </span>
+                        {% elif order.work_status == 'Ready' %}
+                        <span style="background: #d1fae5; color: #064e3b; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-check-double" style="font-size: 0.7rem;"></i> Ready
+                        </span>
+                        {% elif order.work_status == 'Delivered' %}
+                        <span style="background: #e0f2fe; color: #0c4a6e; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-truck-fast" style="font-size: 0.7rem;"></i> Delivered
+                        </span>
+                        {% else %}
+                        <span class="badge badge-secondary">{{ order.work_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">
+                        {% if order.payment_status == 'Paid' %}
+                        <span style="background: #d1fae5; color: #064e3b; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 700; border: 1px solid #a7f3d0;">PAID</span>
+                        {% elif order.payment_status == 'Half-Payment' %}
+                        <span style="background: #fef3c7; color: #78350f; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 700; border: 1px solid #fde68a;">PARTIAL</span>
+                        {% else %}
+                        <span style="background: #fde8e8; color: #7f1d1d; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 700; border: 1px solid #fca5a5;">DUES</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right; font-weight: 800; color: var(--text-primary); font-size: 1.05rem;">
+                        ₹{{ order.balance|intcomma }}
+                    </td>
+                    <td style="text-align: center;">
+                        <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                            <!-- Data attributes adjusted for DTL loops -->
+                            <button class="btn btn-sm btn-primary" type="button" data-id="{{ order.id }}"
+                                data-status="{{ order.work_status }}" data-total="{{ order.total_amt }}"
+                                data-advance="{{ order.advance }}" data-mode="{{ order.payment_mode }}"
+                                data-start="{{ order.created_at|date:'Y-m-d' }}"
+                                data-delivery="{{ order.delivery_date|date:'Y-m-d'|default:'' }}"
+                                data-creator="{{ order.bill_created_by|default:'System' }}"
+                                data-customer="{{ order.customer.name }}"
+                                data-items="{% for i in order.items %}{{ i.qty }}x {{ i.name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                                onclick="openManageOrder(this)" title="Manage Order">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <form action="{% url 'delete_order' order.id %}" method="POST"
+                                onsubmit="return confirm('Delete this order?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm"
+                                    style="background: rgba(220, 38, 38, 0.1); color: var(--danger-color); border: 1px solid var(--danger-color); transition: all 0.2s;"
+                                    title="Delete Order">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 2rem;">No orders found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+        <div style="font-size: 0.875rem; color: var(--text-secondary); display: flex; align-items: center; gap: 1rem;">
+            <span>Page {{ orders.number }} of {{ orders.paginator.num_pages }}</span>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+            {% if orders.has_previous %}
+            <a href="?page={{ orders.previous_page_number }}&q={{ request.GET.q }}&status={{ request.GET.status }}&gender={{ request.GET.gender }}"
+                class="btn btn-sm btn-outline" style="border: 1px solid var(--border-color); text-decoration: none;">
+                <i class="fa-solid fa-chevron-left"></i> Prev
+            </a>
+            {% else %}
+            <button class="btn btn-sm btn-outline" disabled
+                style="border: 1px solid var(--border-color); opacity: 0.5; cursor: not-allowed;">
+                <i class="fa-solid fa-chevron-left"></i> Prev
+            </button>
+            {% endif %}
+
+            {% if orders.has_next %}
+            <a href="?page={{ orders.next_page_number }}&q={{ request.GET.q }}&status={{ request.GET.status }}&gender={{ request.GET.gender }}"
+                class="btn btn-sm btn-outline" style="border: 1px solid var(--border-color); text-decoration: none;">
+                Next <i class="fa-solid fa-chevron-right"></i>
+            </a>
+            {% else %}
+            <button class="btn btn-sm btn-outline" disabled
+                style="border: 1px solid var(--border-color); opacity: 0.5; cursor: not-allowed;">
+                Next <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Unified Manage Order Modal -->
+<div id="manageModal" class="sidebar-overlay">
+    <div id="manageModalPanel" class="sidebar-panel">
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+            <h3 style="font-size: 1.5rem; font-weight: 600;">Manage Order</h3>
+            <button onclick="toggleModal('manageModal')"
+                style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+
+        <form method="POST" action="{% url 'orders_update_details' %}">
+            {% csrf_token %}
+            <input type="hidden" name="order_id" id="manage_order_id">
+            <!-- Hidden Fields/Preserved -->
+            <input type="hidden" id="manage_start_date">
+
+            <!-- Order Info (New) -->
+            <div
+                style="background: var(--bg-color); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 2rem;">
+                <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Customer</div>
+                <div style="font-weight: 600; font-size: 1.1rem; color: var(--primary-color); margin-bottom: 0.75rem;"
+                    id="manage_info_customer">-</div>
+
+                <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Items</div>
+                <div style="font-weight: 500;" id="manage_info_items">-</div>
+            </div>
+
+            <!-- Focus 1: Delivery Status -->
+            <div style="margin-bottom: 2rem;">
+                <h4
+                    style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                    Delivery Status
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                    <div>
+                        <label for="manage_status" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Work Status</label>
+                        <select name="status" id="manage_status" class="form-input" required
+                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary);">
+                            <option value="Processing">Processing</option>
+                            <option value="Ready">Ready</option>
+                            <option value="Delivered">Delivered</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="manage_creator" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Bill Created By</label>
+                        <select name="bill_created_by" id="manage_creator" class="form-input"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary);">
+                            <option value="System">System</option>
+                            {% if shop.bill_creators %}
+                                {% for creator in shop.bill_creators %}
+                                    <option value="{{ creator }}">{{ creator }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="manage_delivery_date" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Delivery Date</label>
+                        <input type="date" name="delivery_date" id="manage_delivery_date" class="form-input" required
+                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary);">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Focus 2: Payment Status -->
+            <div style="margin-bottom: 1rem;">
+                <h4
+                    style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                    Payment Status
+                </h4>
+
+                <div style="margin-bottom: 1rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <label for="manage_total" style="font-weight: 500;">Total Bill</label>
+                    </div>
+                    <div style="position: relative;">
+                        <span
+                            style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary);">₹</span>
+                        <input type="number" name="total_amt" id="manage_total" class="form-input" required min="0"
+                            step="0.01"
+                            style="width: 100%; padding: 0.75rem 0.75rem 0.75rem 2rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary); font-weight: 600;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <label for="manage_advance" style="font-weight: 500;">Paid Amount</label>
+                        <button type="button" class="btn btn-sm btn-outline" onclick="addFullPayment()"
+                            style="font-size: 0.8rem; padding: 2px 8px; border: 1px solid var(--success-color); color: var(--success-color);">
+                            <i class="fa-solid fa-check"></i> Mark Full Paid
+                        </button>
+                    </div>
+                    <div style="position: relative;">
+                        <span
+                            style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary);">₹</span>
+                        <input type="number" name="advance" id="manage_advance" class="form-input" required min="0"
+                            step="0.01"
+                            style="width: 100%; padding: 0.75rem 0.75rem 0.75rem 2rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary);">
+                    </div>
+                </div>
+
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; background: #f9fafb; padding: 0.75rem; border-radius: 0.375rem;">
+                    <span style="color: var(--text-secondary);">Balance Due:</span>
+                    <span id="calc_balance" style="font-weight: 700; font-size: 1.1rem;">₹0</span>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label for="manage_mode" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Payment Mode</label>
+                    <select name="payment_mode" id="manage_mode" class="form-input"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary);">
+                        <option value="Cash">Cash</option>
+                        <option value="Online / UPI">Online / UPI</option>
+                        <option value="Card">Card</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                    </select>
+                </div>
+            </div>
+
+            <div
+                style="position: sticky; bottom: 0; background: var(--card-bg); padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                <button type="submit" class="btn btn-primary"
+                    style="width: 100%; justify-content: center; padding: 1rem; font-size: 1rem;">
+                    Update Order
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Modal / Sidebar Styling */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: flex-end;
+    }
+
+    .sidebar-panel {
+        width: 100%;
+        max-width: 450px;
+        height: 100%;
+        background: var(--card-bg);
+        padding: 2rem;
+        box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1);
+        transform: translateX(100%);
+        transition: transform 0.3s ease-out;
+        overflow-y: auto;
+    }
+
+    .sidebar-overlay.active {
+        display: flex;
+    }
+
+    .sidebar-overlay.active .sidebar-panel {
+        transform: translateX(0);
+    }
+
+    /* Premium Table Styling */
+    .card {
+        border: none;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    th {
+        background-color: var(--bg-color) !important;
+        color: var(--text-secondary) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.75rem !important;
+        padding: 1rem !important;
+        border-bottom: 2px solid var(--border-color) !important;
+    }
+
+    td {
+        padding: 1.25rem 1rem !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+
+    tr:hover td {
+        background-color: rgba(128, 128, 128, 0.05);
+    }
+
+    .badge-pill {
+        padding: 0.4rem 1rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Mobile Improvements */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 1rem;
+        }
+
+        .month-nav {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .filter-bar {
+            display: flex !important;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        div[style*="justify-content: space-between; align-items: center; padding-top: 1rem"] {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start !important;
+        }
+
+        table, thead, tbody, th, td, tr {
+            display: block;
+        }
+
+        thead tr {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+        }
+
+        tr {
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            background: var(--card-bg);
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        td {
+            border: none !important;
+            border-bottom: 1px solid var(--border-color) !important;
+            position: relative;
+            padding: 0.75rem 0 !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: left;
+        }
+
+        td:last-child {
+            border-bottom: none !important;
+            justify-content: flex-end;
+            padding-top: 1rem !important;
+        }
+
+        td:nth-of-type(1)::before { content: "#"; font-weight: 600; color: var(--text-secondary); }
+        td:nth-of-type(2)::before { content: "Customer"; font-weight: 600; color: var(--text-secondary); }
+        td:nth-of-type(3)::before { content: "Items"; font-weight: 600; color: var(--text-secondary); }
+        td:nth-of-type(4)::before { content: "Status"; font-weight: 600; color: var(--text-secondary); }
+        td:nth-of-type(5)::before { content: "Payment"; font-weight: 600; color: var(--text-secondary); }
+        td:nth-of-type(6)::before { content: "Balance"; font-weight: 600; color: var(--text-secondary); }
+    }
+</style>
+<script>
+    function openManageOrder(btn) {
+        document.getElementById('manage_order_id').value = btn.dataset.id;
+        document.getElementById('manage_info_customer').textContent = btn.dataset.customer;
+        document.getElementById('manage_info_items').textContent = btn.dataset.items;
+        document.getElementById('manage_status').value = btn.dataset.status;
+        document.getElementById('manage_delivery_date').value = btn.dataset.delivery;
+        document.getElementById('manage_total').value = btn.dataset.total;
+        document.getElementById('manage_advance').value = btn.dataset.advance;
+        document.getElementById('manage_mode').value = btn.dataset.mode;
+        document.getElementById('manage_creator').value = btn.dataset.creator;
+        document.getElementById('manage_start_date').value = btn.dataset.start;
+
+        // Recalculate balance helper
+        calculateBalance();
+
+        toggleModal('manageModal');
+    }
+
+    function calculateBalance() {
+        var total = Number.parseFloat(document.getElementById('manage_total').value) || 0;
+        var paid = Number.parseFloat(document.getElementById('manage_advance').value) || 0;
+        var balance = total - paid;
+        document.getElementById('calc_balance').textContent = '₹' + balance.toFixed(2);
+    }
+
+    function addFullPayment() {
+        var total = Number.parseFloat(document.getElementById('manage_total').value) || 0;
+        document.getElementById('manage_advance').value = total;
+        calculateBalance();
+    }
+
+    document.getElementById('manage_total').addEventListener('input', calculateBalance);
+    document.getElementById('manage_advance').addEventListener('input', calculateBalance);
+
+    function navigateToPage(input) {
+        var page = input.value;
+        var url = input.dataset.baseUrl;
+        var params = new URLSearchParams();
+        params.append('page', page);
+        if (input.dataset.q) params.append('q', input.dataset.q);
+        if (input.dataset.status) params.append('status', input.dataset.status);
+        if (input.dataset.deliveryDate) params.append('delivery_date', input.dataset.deliveryDate);
+
+        globalThis.location.href = url + '?' + params.toString();
+    }
+
+    const manageModalElement = document.getElementById('manageModal');
+    if (manageModalElement) {
+        manageModalElement.addEventListener('click', function() { toggleModal('manageModal'); });
+    }
+    const manageModalPanelElement = document.getElementById('manageModalPanel');
+    if (manageModalPanelElement) {
+        manageModalPanelElement.addEventListener('click', function(event) { event.stopPropagation(); });
+    }
+</script>
+{% endblock %}

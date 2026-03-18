@@ -1,0 +1,60 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Sign Up{% endblock %}
+
+{% block content %}
+<h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; text-align: center;">Register Your Shop</h2>
+<p style="text-align: center; color: #6B7280; font-size: 0.875rem; margin-bottom: 1.5rem;">Join the platform as a Shop Owner</p>
+
+<form action="{% url 'register' %}" method="POST">
+    {% csrf_token %}
+    
+    <!-- Honeypot field (hidden from humans, bots will fill it) -->
+    <div style="display:none;">
+        <label for="honeypot_website">Keep this field empty</label>
+        <input type="text" id="honeypot_website" name="website" autocomplete="off">
+    </div>
+
+    <div class="form-group">
+        <label for="owner_name" class="form-label">Owner Full Name</label>
+        <input type="text" id="owner_name" name="owner_name" class="form-input" placeholder="e.g. John Doe" required>
+    </div>
+
+    <div class="form-group">
+        <label for="shop_name" class="form-label">Shop Name</label>
+        <input type="text" id="shop_name" name="shop_name" class="form-input" placeholder="e.g. Royal Tailors" required>
+    </div>
+
+    <div class="form-group">
+        <label for="mobile" class="form-label">Mobile Number</label>
+        <input type="tel" id="mobile" name="mobile" class="form-input" placeholder="e.g. +91 9876543210" required>
+    </div>
+
+    <div class="form-group">
+        <label for="email" class="form-label">Email Address</label>
+        <input type="email" id="email" name="email" class="form-input" placeholder="shop@example.com" required>
+        <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;">This will be your primary login id.</p>
+    </div>
+
+    <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" id="password" name="password" class="form-input" placeholder="Min. 8 characters" required
+            minlength="8">
+        <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;">Must be at least 8 characters long.</p>
+    </div>
+
+    <div class="form-group">
+        <label for="confirm_password" class="form-label">Confirm Password</label>
+        <input type="password" id="confirm_password" name="confirm_password" class="form-input"
+            placeholder="Repeat Password" required minlength="8">
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">
+        Register Shop & Create Account
+    </button>
+</form>
+
+<div class="auth-footer">
+    Already have a shop account? <a href="{% url 'login' %}">Sign in</a>
+</div>
+{% endblock %}

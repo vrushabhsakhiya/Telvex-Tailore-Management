@@ -1,0 +1,759 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding-bottom: 4rem;">
+
+    <!-- Premium Page Header -->
+    <div style="margin-bottom: 3rem; text-align: center; padding: 2rem 0; position: relative;">
+        <!-- Decorative Background Blur -->
+        <div
+            style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 60%; height: 100%; background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%); opacity: 0.15; filter: blur(60px); z-index: -1; border-radius: 50%;">
+        </div>
+
+        <h2
+            style="font-size: 2.5rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem; letter-spacing: -0.02em;">
+            Custom Categories
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 1.1rem; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+            Manage your measurement templates and categories for Gents and Ladies.
+        </p>
+    </div>
+
+    <!-- Main Grid Layout -->
+    <div class="categories-layout">
+
+        <!-- SECTION: Gent's Wear -->
+        <div class="category-section">
+            <div class="section-header"
+                style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div
+                        style="width: 48px; height: 48px; background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color: #4338CA; border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(67, 56, 202, 0.1);">
+                        <i class="fa-solid fa-person" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 0;">Gent's
+                            Wear</h3>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">Men's Collection</span>
+                    </div>
+                </div>
+
+                <button class="btn-premium btn-male" onclick="openAddCategoryModal('male')">
+                    <span class="icon-box"><i class="fa-solid fa-plus"></i></span>
+                    <span class="btn-text">Add Category</span>
+                </button>
+            </div>
+
+            <div class="premium-grid">
+                {% for cat in male_categories %}
+                <div class="premium-card male-card">
+                    <div class="card-content">
+                        <div class="card-icon" style="font-size: 1.5rem;">
+                            {% if 'fa-' in cat.icon %}<i class="fa-solid {{ cat.icon }}"></i>{% else %}{{ cat.icon|default:'👕' }}{% endif %}
+                        </div>
+                        <div class="card-info">
+                            <h4 class="card-title">{{ cat.name }}</h4>
+                            <span class="card-meta">{{ cat.fields_json|length|default:0 }} Measurements</span>
+                        </div>
+                        <div class="card-actions">
+                            <a href="{% url 'delete_category' cat.id %}" class="action-btn delete"
+                                onclick="return confirm('Delete {{ cat.name }}?')">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="card-tags">
+                        {% for field in cat.fields_json|slice:":4" %}
+                        <span class="tag">{{ field }}</span>
+                        {% endfor %}
+                        {% if cat.fields_json|length > 4 %}
+                        <span class="tag more">+{{ cat.fields_json|length|add:"-4" }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Add New Placeholder Card -->
+                <div id="addMaleCategoryCard" class="add-card-placeholder male-placeholder">
+                    <div class="placeholder-content">
+                        <i class="fa-solid fa-circle-plus"></i>
+                        <span>Add New</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION: Ladies' Wear -->
+        <div class="category-section">
+            <div class="section-header"
+                style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div
+                        style="width: 48px; height: 48px; background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); color: #be185d; border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(190, 24, 93, 0.1);">
+                        <i class="fa-solid fa-person-dress" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 0;">Ladies'
+                            Wear</h3>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">Women's Collection</span>
+                    </div>
+                </div>
+
+                <button class="btn-premium btn-female" onclick="openAddCategoryModal('female')">
+                    <span class="icon-box"><i class="fa-solid fa-plus"></i></span>
+                    <span class="btn-text">Add Category</span>
+                </button>
+            </div>
+
+            <div class="premium-grid">
+                {% for cat in female_categories %}
+                <div class="premium-card female-card">
+                    <div class="card-content">
+                        <div class="card-icon" style="font-size: 1.5rem;">
+                            {% if 'fa-' in cat.icon %}<i class="fa-solid {{ cat.icon }}"></i>{% else %}{{ cat.icon|default:'👗' }}{% endif %}
+                        </div>
+                        <div class="card-info">
+                            <h4 class="card-title">{{ cat.name }}</h4>
+                            <span class="card-meta">{{ cat.fields_json|length|default:0 }} Measurements</span>
+                        </div>
+                        <div class="card-actions">
+                            <a href="{% url 'delete_category' cat.id %}" class="action-btn delete"
+                                onclick="return confirm('Delete {{ cat.name }}?')">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="card-tags">
+                        {% for field in cat.fields_json|slice:":4" %}
+                        <span class="tag">{{ field }}</span>
+                        {% endfor %}
+                        {% if cat.fields_json|length > 4 %}
+                        <span class="tag more">+{{ cat.fields_json|length|add:"-4" }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Add New Placeholder Card -->
+                <div id="addFemaleCategoryCard" class="add-card-placeholder female-placeholder">
+                    <div class="placeholder-content">
+                        <i class="fa-solid fa-circle-plus"></i>
+                        <span>Add New</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Add Category Sidebar (Slide Over) -->
+<div id="addCategoryModal" class="sidebar-overlay">
+    <div id="addCategoryPanel" class="sidebar-panel">
+        <!-- Header color will be set by JS -->
+        <div id="modalHeader" class="modal-header"
+            style="padding-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 2rem; transition: background 0.3s; display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="modalTitle"
+                style="font-size: 1.5rem; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.75rem;">
+                <!-- Icon will be injected -->
+                <span>Add New Category</span>
+            </h3>
+            <button onclick="closeAddCategoryModal()"
+                style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary); opacity: 0.7;">&times;</button>
+        </div>
+
+        <form action="{% url 'add_category' %}" method="POST">
+            {% csrf_token %}
+            <!-- Gender Selection (Hidden but togglable if needed, currently auto-set) -->
+            <div class="form-group" style="display: none;">
+                <input type="radio" name="gender" id="genderMale" value="male">
+                <input type="radio" name="gender" id="genderFemale" value="female">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="categoryNameInput">Category Name</label>
+                <div style="position: relative;">
+                    <i class="fa-solid fa-tag"
+                        style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #9CA3AF;"></i>
+                    <input type="text" name="name" id="categoryNameInput" placeholder="e.g. Shirt, Kurta, Blouse" required autofocus
+                        style="width: 100%; padding: 0.75rem 0.75rem 0.75rem 2.5rem; border: 1px solid var(--border-color); border-radius: 0.375rem; background: var(--bg-color); color: var(--text-primary); font-size: 1rem; transition: box-shadow 0.2s, border-color 0.2s;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label for="iconDropdown" style="margin-bottom: 0.8rem; font-weight: 600; display: block;">Select Category Icon</label>
+                <div style="position: relative;">
+                    <select name="icon" id="iconDropdown" required
+                        style="width: 100%; padding: 0.85rem 1rem; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-color); color: var(--text-primary); font-size: 1.1rem; appearance: none; cursor: pointer; transition: all 0.2s;">
+                        
+                        <!-- MALE OPTIONS -->
+                        <optgroup label="Gent's Wear Icons" class="male-options">
+                            <option value="👔">👔 Shirt</option>
+                            <option value="👕">👕 T-Shirt</option>
+                            <option value="👖">👖 Pant</option>
+                            <option value="🧥">🧥 Blazer</option>
+                            <option value="🤵">🤵 Suit</option>
+                            <option value="🦺">🦺 Waistcoat</option>
+                            <option value="👘">👘 Kurta</option>
+                            <option value="👘">👘 Kurta Pajama</option>
+                            <option value="🤵">🤵 Sherwani</option>
+                            <option value="🦺">🦺 Nehru Jacket</option>
+                            <option value="👘">👘 Pathani Suit</option>
+                            <option value="🤵">🤵 Bandhgala</option>
+                            <option value="👘">👘 Thobe</option>
+                            <option value="👘">👘 Dishdasha</option>
+                            <option value="👘">👘 Kandura</option>
+                            <option value="👘">👘 Jubba</option>
+                            <option value="🧥">🧥 Bisht</option>
+                            <option value="👳">👳 Dhoti</option>
+                        </optgroup>
+
+                        <!-- FEMALE OPTIONS -->
+                        <optgroup label="Ladies' Wear Icons" class="female-options">
+                            <option value="👚">👚 Blouse</option>
+                            <option value="👗">👗 Dress</option>
+                            <option value="👖">👖 Jeans</option>
+                            <option value="👗">👗 Skirt</option>
+                            <option value="👕">👕 Top</option>
+                            <option value="🧥">🧥 Jacket</option>
+                            <option value="🥻">🥻 Saree</option>
+                            <option value="👘">👘 Kurti</option>
+                            <option value="👗">👗 Lehenga</option>
+                            <option value="👘">👘 Anarkali</option>
+                            <option value="👖">👖 Palazzo</option>
+                            <option value="👖">👖 Sharara</option>
+                            <option value="👘">👘 Abaya</option>
+                            <option value="👘">👘 Kaftan</option>
+                            <option value="🧕">🧕 Hijab</option>
+                        </optgroup>
+
+                        <!-- GENERAL -->
+                        <optgroup label="Tailoring Tools">
+                            <option value="fa-scissors">✂️ Scissors</option>
+                            <option value="fa-tape">📏 Tape</option>
+                            <option value="fa-star">⭐ Premium/Special</option>
+                        </optgroup>
+                    </select>
+                    <i class="fa-solid fa-chevron-down" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); pointer-events: none; opacity: 0.5;"></i>
+                </div>
+            </div>
+                </style>
+
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <label for="newFieldInput">Measurement Fields</label>
+                    <span>What do you measure?</span>
+                </div>
+
+                <div class="field-builder"
+                    style="background: var(--bg-color); padding: 1.25rem; border-radius: 0.75rem; border: 1px dashed var(--border-color);">
+
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                        <input type="text" id="newFieldInput" placeholder="Part Name (e.g. Chest, Length)"
+                            style="flex: 1; padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-primary); border-radius: 0.375rem; font-size: 0.95rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <button type="button" id="btnAddField" onclick="addFieldTag()"
+                            style="padding: 0 1.25rem; border-radius: 0.375rem; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                            <i class="fa-solid fa-plus"></i> Add
+                        </button>
+                    </div>
+
+                    <div id="fieldTags"
+                        style="display: flex; flex-wrap: wrap; gap: 0.6rem; min-height: 2rem; align-items: center;">
+                        <!-- Tags inserted here -->
+                        <div
+                            style="width: 100%; text-align: center; color: #9CA3AF; font-size: 0.85rem; padding: 0.5rem;">
+                            <i class="fa-solid fa-arrow-up"
+                                style="margin-bottom: 0.25rem; display: block; opacity: 0.5;"></i>
+                            Type above and press Enter
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" name="fields_json" id="fieldsJson" required>
+            </div>
+
+            <div class="modal-footer"
+                style="padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" class="btn" onclick="closeAddCategoryModal()"
+                    style="border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-primary); padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 500; cursor: pointer; transition: background 0.1s;">
+                    Cancel
+                </button>
+                <button type="submit" id="btnSaveCategory" class="btn"
+                    style="padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 600; color: white; border: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.1s;">
+                    Add Category
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* PREMIUM GRID & CARDS */
+    .category-section {
+        position: relative;
+    }
+
+    .premium-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* Base Card Style */
+    .premium-card {
+        background: var(--card-bg);
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .premium-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Male Theme */
+    .male-card:hover {
+        border-color: #818cf8;
+        /* Light Indigo */
+    }
+
+    .male-card .card-icon {
+        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        color: #4338CA;
+    }
+
+    /* Female Theme */
+    .female-card:hover {
+        border-color: #f472b6;
+        /* Light Pink */
+    }
+
+    .female-card .card-icon {
+        background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+        color: #be185d;
+    }
+
+    /* Card Content Layout */
+    .card-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .card-info {
+        flex-grow: 1;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .card-meta {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .card-actions {
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .premium-card:hover .card-actions {
+        opacity: 1;
+    }
+
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .action-btn.delete {
+        color: #ef4444;
+    }
+
+    .action-btn.delete:hover {
+        background: #fee2e2;
+    }
+
+    /* Tags/Fields */
+    .card-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .tag {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 500;
+        background: var(--bg-color);
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+    }
+
+    .tag.more {
+        background: transparent;
+        border: 1px dashed var(--border-color);
+    }
+
+    /* Add New Placeholder */
+    .add-card-placeholder {
+        border-radius: 20px;
+        border: 2px dashed var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 180px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .placeholder-content {
+        text-align: center;
+        color: var(--text-secondary);
+        opacity: 0.6;
+        transition: all 0.2s;
+    }
+
+    .placeholder-content i {
+        font-size: 2rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .add-card-placeholder:hover {
+        border-color: currentColor;
+        background: var(--card-bg);
+    }
+
+    .add-card-placeholder:hover .placeholder-content {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+
+    .male-placeholder {
+        color: #4338CA;
+    }
+
+    .female-placeholder {
+        color: #be185d;
+    }
+
+    /* Premium Buttons */
+    .btn-premium {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 12px;
+        transition: all 0.2s;
+    }
+
+    .btn-premium .icon-box {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+
+    .btn-premium .btn-text {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    /* Male Btn */
+    .btn-male .icon-box {
+        background: #4338CA;
+    }
+
+    .btn-male .btn-text {
+        color: #4338CA;
+    }
+
+    .btn-male:hover {
+        background: #e0e7ff;
+    }
+
+    /* Female Btn */
+    .btn-female .icon-box {
+        background: #be185d;
+    }
+
+    .btn-female .btn-text {
+        color: #be185d;
+    }
+
+    .btn-female:hover {
+        background: #fce7f3;
+    }
+
+    /* SIDEBAR STYLES (Keep existing sidebar styles, just ensure compatibility) */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: flex-end;
+    }
+
+    .sidebar-panel {
+        width: 100%;
+        max-width: 500px;
+        height: 100%;
+        background: var(--card-bg);
+        padding: 2rem;
+        box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1);
+        transform: translateX(100%);
+        transition: transform 0.3s ease-out;
+        overflow-y: auto;
+    }
+
+    .sidebar-overlay.active .sidebar-panel {
+        transform: translateX(0);
+    }
+
+    @media (max-width: 768px) {
+        .premium-grid {
+            grid-template-columns: 1fr;
+        }
+
+        /* Reduce gaps and padding on mobile */
+        .categories-layout {
+            gap: 2rem !important;
+        }
+
+        .category-section .section-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .category-section .section-header>div {
+            width: 100%;
+        }
+
+        .category-section .section-header button {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    .categories-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 4rem;
+    }
+</style>
+
+<script>
+    // Variables
+    var catFields = [];
+    var currentCatGender = 'male';
+
+    function openAddCategoryModal(gender) {
+        const modal = document.getElementById('addCategoryModal');
+        if (!modal) return;
+
+        // Reset and Show with Animation
+        catFields = [];
+        currentCatGender = gender;
+        renderCatFields();
+        document.getElementById('fieldsJson').value = '[]';
+        document.getElementById('newFieldInput').value = '';
+
+        const titleEl = document.getElementById('modalTitle');
+        const saveBtn = document.getElementById('btnSaveCategory');
+        const addBtn = document.getElementById('btnAddField');
+
+        // Logic to show sidebar (Relies on style.css .active class for display:flex)
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.classList.add('active');
+        }, 10);
+
+        // Auto-set gender and Dynamic Theming
+        if (gender === 'male') {
+            const maleRadio = document.getElementById('genderMale');
+            if (maleRadio) maleRadio.checked = true;
+
+            // Themes: Indigo (Gent's)
+            titleEl.innerHTML = `<i class="fa-solid fa-shirt"></i> Add Gent's Wear Category`;
+            titleEl.style.color = '#4338CA';
+            if (saveBtn) saveBtn.style.background = '#4338CA';
+            if (addBtn) {
+                addBtn.style.background = '#4338CA';
+                addBtn.style.color = 'white';
+            }
+
+        } else if (gender === 'female') {
+            const femaleRadio = document.getElementById('genderFemale');
+            if (femaleRadio) femaleRadio.checked = true;
+
+            // Themes: Pink (Ladies')
+            titleEl.innerHTML = `<i class="fa-solid fa-person-dress"></i> Add Ladies' Wear Category`;
+            titleEl.style.color = '#BE185D';
+            if (saveBtn) saveBtn.style.background = '#BE185D';
+            if (addBtn) {
+                addBtn.style.background = '#BE185D';
+                addBtn.style.color = 'white';
+            }
+        }
+
+        // Filter Dropdown Options by Gender
+        const maleGroup = document.querySelector('.male-options');
+        const femaleGroup = document.querySelector('.female-options');
+        const iconDropdown = document.getElementById('iconDropdown');
+
+        if (gender === 'male') {
+            if (maleGroup) maleGroup.style.display = '';
+            if (femaleGroup) femaleGroup.style.display = 'none';
+            iconDropdown.value = '👔'; // Default male
+        } else {
+            if (maleGroup) maleGroup.style.display = 'none';
+            if (femaleGroup) femaleGroup.style.display = '';
+            iconDropdown.value = '👚'; // Default female
+        }
+
+        // Focus input
+        setTimeout(() => {
+            const nameInput = document.querySelector('input[name="name"]');
+            if (nameInput) nameInput.focus();
+        }, 100);
+    }
+
+    function closeAddCategoryModal() {
+        const modal = document.getElementById('addCategoryModal');
+        if (!modal) return;
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300);
+    }
+
+    function addFieldTag() {
+        const input = document.getElementById('newFieldInput');
+        const val = input.value.trim();
+        if (val && !catFields.includes(val)) {
+            catFields.push(val);
+            renderCatFields();
+            input.value = '';
+            input.focus();
+        }
+        updateJson();
+    }
+
+    // Allow Enter key to add field
+    const newFieldInput = document.getElementById('newFieldInput');
+    if (newFieldInput) {
+        newFieldInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addFieldTag();
+            }
+        });
+    }
+
+    // Modal overlay handlers to replace onclick properties
+    const addCatModal = document.getElementById('addCategoryModal');
+    if (addCatModal) {
+        addCatModal.addEventListener('click', function() { closeAddCategoryModal(); });
+    }
+    const addCatPanel = document.getElementById('addCategoryPanel');
+    if (addCatPanel) {
+        addCatPanel.addEventListener('click', function(e) { e.stopPropagation(); });
+    }
+
+    // Add card handlers
+    const mCard = document.getElementById('addMaleCategoryCard');
+    if (mCard) {
+        mCard.addEventListener('click', function() { openAddCategoryModal('male'); });
+    }
+    const fCard = document.getElementById('addFemaleCategoryCard');
+    if (fCard) {
+        fCard.addEventListener('click', function() { openAddCategoryModal('female'); });
+    }
+
+    function removeField(index) {
+        catFields.splice(index, 1);
+        renderCatFields();
+        updateJson();
+    }
+
+    function renderCatFields() {
+        const container = document.getElementById('fieldTags');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (catFields.length === 0) {
+            container.innerHTML = '<div style="width: 100%; text-align: center; color: #9CA3AF; font-size: 0.85rem; padding: 0.5rem;"><i class="fa-solid fa-arrow-up" style="margin-bottom: 0.25rem; display: block; opacity: 0.5;"></i>Type above and press Enter</div>';
+            return;
+        }
+
+        // Determine Tag Colors based on Gender
+        let bg = '#E0E7FF'; // Default Male
+        let txt = '#4338CA';
+
+        if (currentCatGender === 'female') {
+            bg = '#FCE7F3';
+            txt = '#BE185D';
+        }
+
+        catFields.forEach((f, i) => {
+            const tag = document.createElement('span');
+            tag.style.cssText = `background: ${bg}; color: ${txt}; padding: 0.35rem 0.75rem; border-radius: 99px; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s;`;
+            tag.innerHTML = `${f} <i class="fa-solid fa-xmark" onclick="removeField(${i})" style="cursor: pointer; opacity: 0.7;"></i>`;
+
+            container.appendChild(tag);
+        });
+    }
+
+    function updateJson() {
+        const jsonInput = document.getElementById('fieldsJson');
+        if (jsonInput) jsonInput.value = JSON.stringify(catFields);
+    }
+</script>
+{% endblock %}

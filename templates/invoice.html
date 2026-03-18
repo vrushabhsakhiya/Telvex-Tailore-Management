@@ -1,0 +1,475 @@
+{% load static %}
+{% load humanize %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice {{ order.id }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            background: #f3f4f6;
+            padding: 2rem;
+            color: #111827;
+        }
+
+        .invoice-container {
+            max-width: 210mm;
+            min-height: 297mm;
+            margin: auto;
+            background: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .shop h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            font-weight: 800;
+        }
+
+        .shop-meta {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #4b5563;
+            line-height: 1.5;
+        }
+
+        .invoice-meta {
+            text-align: right;
+            min-width: 180px;
+        }
+
+        .invoice-meta h2 {
+            margin: 0;
+            font-size: 2rem;
+            letter-spacing: 0.15em;
+            color: #e5e7eb;
+            font-weight: 900;
+        }
+
+        .label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .section {
+            margin-bottom: 1.75rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+
+        th {
+            background: #111827;
+            color: #fff;
+            padding: 0.75rem;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.9rem;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .totals {
+            width: 300px;
+            margin-left: auto;
+        }
+
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            font-weight: 500;
+        }
+
+        .totals-final {
+            border-top: 2px solid #111827;
+            padding-top: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 800;
+        }
+
+        .text-red {
+            color: #dc2626;
+        }
+
+        .footer {
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .signature {
+            margin-top: 3rem;
+            text-align: center;
+        }
+
+        .signature-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .signature-line {
+            width: 200px;
+            margin: 0.5rem auto;
+            border-top: 1px solid #111827;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+
+            .invoice-container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="invoice-container">
+
+        <!-- HEADER -->
+        <div class="header">
+
+            <!-- SHOP INFO -->
+            <div class="shop">
+                {% if shop.logo %}
+                <img src="{% if '/media/' in shop.logo %}{{ shop.logo }}{% else %}/media/{{ shop.logo }}{% endif %}"
+                    alt="Shop Logo" style="height:80px; max-width:200px; object-fit:contain; margin-bottom:0.5rem;">
+                {% endif %}
+
+                <h1>{{ shop.shop_name|default:"My Shop" }}</h1>
+
+                <div class="shop-meta">
+                    {% if shop.address %}{{ shop.address }}<br>{% endif %}
+                    {% if shop.mobile %}<strong>Mobile:</strong> {{ shop.mobile }}<br>{% endif %}
+                    {% if shop.gst_no %}<strong>GSTIN:</strong> {{ shop.gst_no }}{% endif %}
+                </div>
+            </div>
+
+            <!-- INVOICE META -->
+            <div class="invoice-meta">
+                <h2>INVOICE</h2>
+
+                <div class="section">
+                    <div class="label">Invoice No</div>
+                    <div class="value">{{ order.id|stringformat:"04d" }}</div>
+                </div>
+
+                <div class="section">
+                    <div class="label">Date</div>
+                    <div class="value">{{ order.created_at|date:"d M, Y" }}</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- CUSTOMER -->
+        <div class="section">
+            <div class="label">Customer</div>
+            <div class="value">{{ order.customer.name }}</div>
+            <div class="shop-meta">
+                {{ order.customer.mobile }}<br>
+                {{ order.customer.city }}
+            </div>
+        </div>
+
+        <!-- ITEMS TABLE -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th class="right">Qty</th>
+                    <th class="right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td class="right">{{ item.qty|default:1 }}</td>
+                    <td class="right">₹{{ item.amount|intcomma }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td>Custom Tailoring</td>
+                    <td class="right">1</td>
+                    <td class="right">₹{{ order.total_amt|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- TOTALS -->
+        <div class="totals">
+            <div class="totals-row">
+                <span>Total Amount</span>
+                <span>₹{{ order.total_amt|intcomma }}</span>
+            </div>
+            <div class="totals-row">
+                <span>Paid Amount</span>
+                <span>₹{{ order.advance|intcomma }}</span>
+            </div>
+            <div class="totals-row totals-final {% if order.balance > 0 %}text-red{% endif %}">
+                <span>Balance Due</span>
+                <span>₹{{ order.balance|intcomma }}</span>
+            </div>
+        </div>
+
+        <!-- PAYMENT QR CODE -->
+        {% if upi_qr_url and order.balance > 0 %}
+        <div style="margin-top: 2rem; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; display: flex; align-items: center; gap: 1.5rem; background: #fafafa;">
+            <div style="text-align: center;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ upi_qr_url|urlencode }}" 
+                     alt="UPI QR Code" style="width: 120px; height: 120px; border: 4px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="font-size: 0.65rem; color: #6b7280; margin-top: 0.25rem;">Scan to Pay</div>
+            </div>
+            <div>
+                <h4 style="margin: 0 0 0.25rem 0; color: #111827;">Quick Payment</h4>
+                <p style="margin: 0; font-size: 0.85rem; color: #4b5563;">Scan the QR code using any UPI app (PhonePe, Google Pay, BHIM) to pay the balance of <strong>₹{{ order.balance|intcomma }}</strong>.</p>
+                <div style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 600;">UPI ID: {{ shop.upi_id }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- TERMS -->
+        {% if shop.terms %}
+        <div class="footer">
+            <strong>Terms & Conditions</strong><br>
+            {{ shop.terms|linebreaksbr }}
+        </div>
+        {% endif %}
+
+        <!-- SIGNATURE -->
+        <div class="signature">
+            <div class="signature-name">{{ order.bill_created_by|default:shop.shop_name }}</div>
+            {% if bill_created_role %}
+            <div style="font-size: 0.75rem; color: #6b7280; font-weight: 500; margin-bottom: 0.5rem;">({{ bill_created_role }})</div>
+            {% endif %}
+            <div class="signature-line"></div>
+            <div class="label">Authorized Signatory</div>
+        </div>
+
+    </div>
+
+    <!-- Toolbar Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        .toolbar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            padding: 10px 20px;
+            border-radius: 50px;
+            display: flex;
+            gap: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .btn-tool {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 45px;
+            height: 45px;
+        }
+
+        .btn-tool:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        @media print {
+            .toolbar {
+                display: none;
+            }
+        }
+    </style>
+
+    <div class="toolbar no-print">
+        <button class="btn-tool" onclick="downloadPDF()" title="Save PDF">
+            <i class="fa-solid fa-download"></i>
+        </button>
+        <button class="btn-tool" onclick="shareInvoice()" title="System Share (Mobile)">
+            <i class="fa-solid fa-share-nodes"></i>
+        </button>
+        <button class="btn-tool" onclick="sendWhatsApp()" title="Send PDF via WhatsApp" style="color: #25D366;">
+            <i class="fa-brands fa-whatsapp"></i>
+        </button>
+        <a href="https://wa.me/{{ order.customer.mobile|cut:' ' }}?text={{ "Hello, your order #"|add:order.id|add:" is ready at "|add:shop.shop_name|urlencode }}" 
+           class="btn-tool" target="_blank" title="Send WhatsApp Message" style="color: #25D366; text-decoration: none;">
+            <i class="fa-regular fa-comment-dots"></i>
+        </a>
+        <button class="btn-tool" onclick="window.print()" title="Print">
+            <i class="fa-solid fa-print"></i>
+        </button>
+    </div>
+
+    <script>
+        function downloadPDF() {
+            const element = document.querySelector('.invoice-container');
+            const opt = {
+                margin: 0,
+                filename: 'Invoice_{{ order.id }}.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        async function sendWhatsApp() {
+            const element = document.querySelector('.invoice-container');
+            const opt = {
+                margin: 0,
+                filename: 'Invoice_{{ order.id }}.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // 1. UI Loading State
+            const btn = document.querySelector('button[onclick="sendWhatsApp()"]');
+            const icon = btn.querySelector('i');
+            const originalClass = icon.className;
+            icon.className = 'fa-solid fa-spinner fa-spin';
+            btn.disabled = true;
+
+            try {
+                // 2. Generate PDF
+                const pdf = await html2pdf().set(opt).from(element).outputPdf('blob');
+                const file = new File([pdf], opt.filename, { type: 'application/pdf' });
+
+                // 3. Prepare Message data
+                let mobile = "{{ order.customer.mobile }}".replaceAll(/\D/g, '');
+                if (mobile.length === 10) mobile = "91" + mobile;
+
+                const text = encodeURIComponent(
+                    "Hello {{ order.customer.name }},\n" +
+                    "Here is your Invoice #{{ order.id }} from {{ shop.shop_name }}.\n" +
+                    "Amount: ₹{{ order.total_amt|intcomma }}\n" +
+                    "The PDF file is attached."
+                );
+
+                // 4. Try Native Sharing (Best for Mobile)
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: 'Invoice {{ order.id }}',
+                            text: decodeURIComponent(text)
+                        });
+                        // Success - stop here
+                        icon.className = originalClass;
+                        btn.disabled = false;
+                        return;
+                    } catch (ignoredError) {
+                        console.warn("Native share cancelled or failed, falling back to desktop approach.", ignoredError);
+                    }
+                }
+
+                // 5. Desktop Fallback: Alert -> Open Chat -> Download
+                // We show alert FIRST so they read it before the new tab steals focus
+                alert("Since browsers cannot attach files automatically to WhatsApp Web:\n\n1. WhatsApp Web will open.\n2. The PDF will download.\n3. Please DRAG & DROP the downloaded file into the chat.");
+
+                const url = `https://wa.me/${mobile}?text=${text}`;
+                window.open(url, '_blank');
+
+                // Trigger Download
+                html2pdf().set(opt).from(element).save();
+
+            } catch (err) {
+                console.error("WhatsApp Logic Error:", err);
+                alert("Error preparing WhatsApp data.");
+            } finally {
+                icon.className = originalClass;
+                btn.disabled = false;
+            }
+        }
+
+        async function shareInvoice() {
+            const element = document.querySelector('.invoice-container');
+            const opt = {
+                margin: 0,
+                filename: 'Invoice_{{ order.id }}.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            try {
+                const pdf = await html2pdf().set(opt).from(element).outputPdf('blob');
+                const file = new File([pdf], opt.filename, { type: 'application/pdf' });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Invoice {{ order.id }}',
+                        text: 'Please find attached invoice.'
+                    });
+                } else {
+                    alert('System Share not available. Please use the Download or WhatsApp buttons.');
+                    downloadPDF();
+                }
+            } catch (err) {
+                console.error('Error sharing:', err);
+                alert('Error generating share link.');
+            }
+        }
+    </script>
+</body>
+
+</html>

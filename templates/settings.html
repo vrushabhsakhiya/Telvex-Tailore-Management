@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+
+<style>
+    /* ================= SETTINGS PAGE ================= */
+
+    .settings-page {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    /* Card */
+    .settings-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1.75rem;
+        margin-bottom: 1.75rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Header */
+    .settings-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .settings-card-header h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    /* ================= VIEW MODE ================= */
+
+    .profile-view {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    .profile-row {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .profile-logo {
+        width: 70px;
+        height: 70px;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+    }
+
+    .profile-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .profile-meta h4 {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .profile-meta p {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+
+    /* ================= EDIT FORM ================= */
+
+    .settings-form {
+        display: none;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+    }
+
+    .settings-form.active {
+        display: grid;
+    }
+
+    .settings-form .full {
+        grid-column: span 2;
+    }
+
+    .settings-form label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        display: block;
+        margin-bottom: 0.35rem;
+    }
+
+    .settings-form input,
+    .settings-form textarea {
+        width: 100%;
+        padding: 0.65rem 0.75rem;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-color);
+    }
+
+    .logo-box {
+        display: flex;
+        gap: 1rem;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--bg-color);
+    }
+
+    .logo-box img {
+        width: 48px;
+        height: 48px;
+        border-radius: 6px;
+        background: #fff;
+    }
+
+    .form-help {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+    }
+
+    /* ================= OTHER SECTIONS ================= */
+
+    .language-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .active-lang {
+        background: var(--primary-color);
+        color: #fff;
+    }
+
+    .data-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.25rem;
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+        .settings-form {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="settings-page">
+
+    <!-- PAGE HEADER -->
+    <div style="margin-bottom:2rem;">
+        <h2 style="font-size:1.6rem;font-weight:700;">{% trans "Settings" %}</h2>
+        <p style="color:var(--text-secondary);">
+            {% trans "Manage your application preferences" %}
+        </p>
+    </div>
+
+    <!-- ================= SHOP PROFILE ================= -->
+    <div class="settings-card">
+
+        <div class="settings-card-header">
+            <h3>{% trans "Shop Profile" %}</h3>
+            <button class="btn btn-outline" onclick="enableEdit()">
+                <i class="fa-solid fa-pen"></i> {% trans "Edit" %}
+            </button>
+        </div>
+
+        <!-- VIEW MODE -->
+        <div id="profileView" class="profile-view">
+            <div class="profile-row">
+                <div
+                    style="width: 80px; height: 80px; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    {% if shop.logo %}
+                    <img src="{% if '/media/' in shop.logo %}{{ shop.logo }}{% else %}/media/{{ shop.logo }}{% endif %}"
+                        alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                    <i class="fa-solid fa-store" style="font-size: 2rem; color: var(--text-secondary);"></i>
+                    {% endif %}
+                </div>
+                <div class="profile-meta">
+                    <h4>{{ shop.shop_name }}</h4>
+                    <p>{{ shop.mobile }}</p>
+                    {% if shop.gst_no %}
+                    <p>GST: {{ shop.gst_no }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <strong>{% trans "Address" %}</strong>
+                <p>{{ shop.address|default:"-" }}</p>
+            </div>
+
+            <div>
+                <strong>{% trans "Bill Terms & Conditions" %}</strong>
+                <p>{{ shop.terms|default:"-" }}</p>
+            </div>
+
+            <div>
+                <strong>{% trans "Bill Creators / Staff" %}</strong>
+                <p>
+                    {% if shop.bill_creators %}
+                        {% for creator in shop.bill_creators %}
+                            <span class="badge badge-secondary" style="margin-right:0.5rem;">{{ creator }}</span>
+                        {% endfor %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- EDIT MODE -->
+        <form id="profileForm" class="settings-form" method="POST" action="{% url 'update_shop_profile' %}"
+            enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="full">
+                <label for="logo_input">{% trans "Shop Logo" %}</label>
+                {% if shop.logo %}
+                <div
+                    style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px;">
+                    <img src="{% if '/media/' in shop.logo %}{{ shop.logo }}{% else %}/media/{{ shop.logo }}{% endif %}"
+                        alt="Current Logo"
+                        style="width: 60px; height: 60px; object-fit: contain; border-radius: 4px; background: white;">
+                    <label for="delete_logo_input" style="color:var(--danger-color);font-size:0.8rem;">
+                        <input type="checkbox" name="delete_logo" id="delete_logo_input">
+                        {% trans "Delete Current Logo" %}
+                    </label>
+                </div>
+                {% endif %}
+                <input type="file" name="logo" id="logo_input">
+                <div class="form-help">{% trans "Leave empty to keep current logo" %}</div>
+            </div>
+
+            <div class="full">
+                <label for="shop_name_input">{% trans "Shop Name" %}</label>
+                <input type="text" name="shop_name" id="shop_name_input" value="{{ shop.shop_name }}">
+            </div>
+
+            <div>
+                <label for="mobile_input">{% trans "Shop Contact No." %}</label>
+                <input type="text" name="mobile" id="mobile_input" value="{{ shop.mobile }}">
+            </div>
+
+            <div>
+                <label for="upi_id_input">{% trans "UPI ID (for QR Code)" %}</label>
+                <input type="text" name="upi_id" id="upi_id_input" value="{{ shop.upi_id }}" placeholder="e.g. shopname@okicici">
+            </div>
+
+            <div>
+                <label for="gst_no_input">{% trans "GST / Reg No." %}</label>
+                <input type="text" name="gst_no" id="gst_no_input" value="{{ shop.gst_no }}">
+            </div>
+
+            <div class="full">
+                <label for="address_input">{% trans "Address" %}</label>
+                <textarea name="address" id="address_input">{{ shop.address }}</textarea>
+            </div>
+
+            <div class="full">
+                <label for="terms_input">{% trans "Bill Terms & Conditions" %}</label>
+                <textarea name="terms" id="terms_input">{{ shop.terms }}</textarea>
+            </div>
+
+            <div class="full settings-section" style="border-top: 1px solid var(--border-color); padding-top: 1.5rem; margin-top: 1rem;">
+                <h4 class="section-title">Staff & Tailors</h4>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label for="new_staff_input" style="display: block; font-size: 0.8rem; margin-bottom: 0.25rem;">Add New Staff Name</label>
+                        <input type="text" name="new_staff_name" id="new_staff_input" class="form-control" placeholder="Enter name">
+                    </div>
+                    <div style="width: 150px;">
+                        <label for="new_staff_role" style="display: block; font-size: 0.8rem; margin-bottom: 0.25rem;">Role</label>
+                        <select name="new_staff_role" id="new_staff_role" class="form-control">
+                            <option value="Tailor">Tailor</option>
+                            <option value="Cutter">Cutter</option>
+                            <option value="Manager">Manager</option>
+                            <option value="Sales">Sales</option>
+                        </select>
+                    </div>
+                    <div style="width: 100px;">
+                        <label for="new_staff_pin" style="display: block; font-size: 0.8rem; margin-bottom: 0.25rem;">Login PIN</label>
+                        <input type="text" name="new_staff_pin" id="new_staff_pin" class="form-control" placeholder="1234" maxlength="4">
+                    </div>
+                </div>
+                
+                <div id="staffListContainer" style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem;">
+                    <!-- JS renders existing staff here -->
+                </div>
+            </div>
+
+            <div class="full form-actions">
+                <button type="button" class="btn btn-outline" onclick="cancelEdit()">
+                    {% trans "Cancel" %}
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    {% trans "Save Profile" %}
+                </button>
+            </div>
+        </form>
+    </div>
+
+
+    <!-- ================= DATA MANAGEMENT ================= -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <h3>{% trans "Data Management" %}</h3>
+        </div>
+
+        <form class="data-grid" method="POST" action="{% url 'export_custom_data' %}">
+            {% csrf_token %}
+            <div class="data-form-group">
+                <label for="start_date_input">{% trans "From Date" %}</label>
+                <input type="date" name="start_date" id="start_date_input" required>
+            </div>
+            <div class="data-form-group">
+                <label for="end_date_input">{% trans "To Date" %}</label>
+                <input type="date" name="end_date" id="end_date_input" required>
+            </div>
+            <div class="data-form-group">
+                <label for="data_type_input">{% trans "Data Type" %}</label>
+                <select name="data_type" id="data_type_input" class="data-type-select">
+                    <option value="orders">{% trans "Orders" %}</option>
+                    <option value="customers">{% trans "Customers" %}</option>
+                    <option value="bills">{% trans "Bills" %}</option>
+                </select>
+            </div>
+            <div class="data-download-container">
+                <button class="btn btn-primary btn-download">
+                    <i class="fa-solid fa-download"></i> {% trans "Download Data" %}
+                </button>
+            </div>
+        </form>
+
+        <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--border-color); display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.05); padding: 1rem; border-radius: 0.5rem; border: 1px solid rgba(59, 130, 246, 0.2);">
+                <div>
+                    <h4 style="margin: 0; color: var(--primary-color);">{% trans "Manual Database Backup" %}</h4>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">{% trans "Download a complete backup of your sqlite database" %}</p>
+                </div>
+                <a href="{% url 'download_backup' %}" class="btn btn-outline" style="border-color: var(--primary-color); color: var(--primary-color);">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> {% trans "Download" %}
+                </a>
+            </div>
+            
+            <form method="POST" action="{% url 'reset_data' %}" onsubmit="return confirm('{% trans "WARNING: This will delete ALL data. Are you sure?" %}');">
+                {% csrf_token %}
+                <button class="btn btn-outline btn-reset-data">
+                    <i class="fa-solid fa-triangle-exclamation"></i> {% trans "Reset System Data" %}
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= ACCOUNT ================= -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <h3>{% trans "Account" %}</h3>
+        </div>
+        <a href="{% url 'logout' %}" class="btn btn-primary btn-logout">
+            <i class="fa-solid fa-right-from-bracket"></i> {% trans "Sign Out" %}
+        </a>
+    </div>
+
+</div>
+
+<script>
+    function enableEdit() {
+        document.getElementById("profileView").style.display = "none";
+        document.getElementById("profileForm").classList.add("active");
+    }
+
+    function cancelEdit() {
+        document.getElementById("profileForm").classList.remove("active");
+        document.getElementById("profileView").style.display = "grid";
+    }
+
+    // Dynamic Staff List
+    function renderStaffList() {
+        const container = document.getElementById('staffListContainer');
+        if (!container) return;
+
+        container.innerHTML = '';
+        
+        // Use JSON strings to safely pass data from Django to JS
+        const creatorsJson = '{{ shop.bill_creators|safe }}'.replaceAll("'", '"');
+        const rolesJson = '{{ shop.staff_roles|safe }}'.replaceAll("'", '"');
+
+        let creators = [];
+        let roles = {};
+
+        try {
+            creators = JSON.parse(creatorsJson);
+            roles = JSON.parse(rolesJson);
+        } catch (e) {
+            console.error("Error parsing staff data", e);
+        }
+        
+        creators.forEach(staff => {
+            const role = roles[staff] || 'Staff';
+            const tag = document.createElement('div');
+            tag.style.cssText = 'background: var(--bg-color); border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 1rem;';
+            tag.innerHTML = `
+                <div>
+                    <div style="font-weight: 600; font-size: 0.9rem;">${staff}</div>
+                    <div style="font-size: 0.7rem; color: var(--primary-color); font-weight: 500;">${role}</div>
+                </div>
+                <form action="/users/settings/staff/delete/${encodeURIComponent(staff)}/" method="POST" style="margin-left: auto;">
+                    {% csrf_token %}
+                    <button type="submit" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">
+                        <i class="fa-solid fa-trash-can" style="font-size: 0.8rem;"></i>
+                    </button>
+                </form>
+            `;
+            container.appendChild(tag);
+        });
+    }
+
+    // Initialize immediately
+    renderStaffList();
+    // Also attach to DOMContentLoaded for initial hard load
+    if (document.readyState === 'loading') {
+       document.addEventListener('DOMContentLoaded', renderStaffList);
+    }
+</script>
+
+{% endblock %}

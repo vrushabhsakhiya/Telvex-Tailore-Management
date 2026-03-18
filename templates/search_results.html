@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 2rem;">
+    <h2 style="font-size: 1.5rem; font-weight: 600;">Search Results</h2>
+    <p style="color: var(--text-secondary);">Showing results for "{{ query }}"</p>
+</div>
+
+<!-- Customers Results -->
+<div class="card" style="margin-bottom: 2rem;">
+    <div class="card-header"
+        style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 600;">Customers ({{ customers|length }})</h3>
+    </div>
+
+    {% if customers %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Mobile</th>
+                    <th>City</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in customers %}
+                <tr>
+                    <td style="font-weight: 600;">{{ c.name }}</td>
+                    <td>{{ c.mobile }}</td>
+                    <td>{{ c.city }}</td>
+                    <td>
+                        <button onclick="openProfile('{{ c.id }}')" class="btn btn-sm btn-primary">
+                            View Profile
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: var(--text-secondary); font-style: italic;">No matching customers found.</p>
+    {% endif %}
+</div>
+
+<!-- Orders Results -->
+<div class="card">
+    <div class="card-header"
+        style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 600;">Orders ({{ orders|length }})</h3>
+    </div>
+
+    {% if orders %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>SR No.</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in orders %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <!-- You might want to show actual Order ID here for reference, but SR No requested -->
+                    <td>{{ o.created_at|date:"Y-m-d" }}</td>
+                    <td>{{ o.customer.name }}</td>
+                    <td>
+                        {% for item in o.items %}
+                        <span class="badge badge-secondary">{{ item.name }}</span>
+                        {% endfor %}
+                    </td>
+                    <td>{{ o.payment_status }} / {{ o.work_status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: var(--text-secondary); font-style: italic;">No matching orders found.</p>
+    {% endif %}
+</div>
+
+<script>
+    function openProfile(id) {
+        // Redirect to customers page to check profile details
+        globalThis.location.href = "{% url 'customers' %}?q=" + id; // Using search q param to filter list might be easier
+        // Or if we implement open_id
+        // globalThis.location.href = "{% url 'customers' %}?open_id=" + id;
+    }
+</script>
+
+{% endblock %}
