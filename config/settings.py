@@ -24,16 +24,17 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'telvex-tailore-management.onrender.com,localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "telvex-tailore-management.onrender.com,localhost,127.0.0.1").split(",")
 
-# Add .vercel.app for Vercel deployment if not in DEBUG mode
+# Add platform-specific hosts if not in DEBUG mode
 if not DEBUG:
-    ALLOWED_HOSTS.append('.vercel.app')
+    if ".vercel.app" not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append('.vercel.app')
 
 
 # Application definition
@@ -92,21 +93,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Main database for users, shop profiles, and global data
-# Both default and main point to talvex_main since the original 'talvex' database was deleted
-MAIN_DB_CONFIG = dj_database_url.config(
-    default=os.environ.get('DATABASE_URL', 'postgres://postgres:postgres@localhost:5432/talvex_main'),
-    conn_max_age=600
-)
-
-# Add required ATOMIC_REQUESTS and TIME_ZONE setting
-MAIN_DB_CONFIG['ATOMIC_REQUESTS'] = False
-MAIN_DB_CONFIG['TIME_ZONE'] = None
-
 DATABASES = {
-    'default': MAIN_DB_CONFIG,
-    'main': MAIN_DB_CONFIG,
+    "default": dj_database_url.config(
+        default=os.getenv("DATABASE_URL", "postgresql://taivexuser:30rbGXfTtcwlJb52yWxE7RFYawfFMU1C@dpg-d75o25muk2gs73dcqvig-a.oregon-postgres.render.com/taivex"),
+        conn_max_age=600,
+        ssl_require=True
+    )
 }
+
+# Keep 'main' alias for multi-tenant router compatibility
+DATABASES['main'] = DATABASES['default']
 
 # Database router for multi-tenancy (simplified for single database)
 DATABASE_ROUTERS = ['config.db_router.MultiTenantRouter']
@@ -148,7 +144,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Media files (for uploads like customer photos)
