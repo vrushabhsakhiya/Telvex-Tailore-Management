@@ -21,5 +21,6 @@ class MultiTenantRouter:
         return True
     
     def allow_migrate(self, db, app_label, model_name=None, **hints):
-        # Allow all migrations on the main database
-        return db == 'main'
+        # Allow all migrations on both 'default' and 'main' database aliases
+        # This ensures tables are created during standard deployment
+        return db in ['default', 'main']

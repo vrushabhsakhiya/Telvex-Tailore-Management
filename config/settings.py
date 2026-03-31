@@ -97,7 +97,7 @@ DATABASES = {
     "default": dj_database_url.config(
         default=os.getenv("DATABASE_URL", "postgresql://taivexuser:30rbGXfTtcwlJb52yWxE7RFYawfFMU1C@dpg-d75o25muk2gs73dcqvig-a.oregon-postgres.render.com/taivex"),
         conn_max_age=600,
-        ssl_require=True
+        ssl_require=not DEBUG # Only require SSL in production (DEBUG=False)
     )
 }
 

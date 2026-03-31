@@ -39,6 +39,8 @@ def register_view(request):
         shop_name = request.POST.get('shop_name')
         mobile = request.POST.get('mobile')
         email = request.POST.get('email')
+        address = request.POST.get('address', '')
+        gst_no = request.POST.get('gst_no', '')
         password = request.POST.get('password')
         confirm = request.POST.get('confirm_password')
 
@@ -61,7 +63,9 @@ def register_view(request):
             ShopProfile.objects.create(
                 user=user, 
                 shop_name=shop_name,
-                mobile=mobile
+                mobile=mobile,
+                address=address,
+                gst_no=gst_no
             )
 
             messages.success(request, 'Shop account created successfully! Please wait for admin approval before logging in.')
@@ -331,9 +335,13 @@ def update_shop_profile(request):
         # Core details
         shop.shop_name = request.POST.get('shop_name', shop.shop_name)
         shop.mobile = request.POST.get('mobile', shop.mobile)
+        shop.whatsapp = request.POST.get('whatsapp', shop.whatsapp)
+        shop.email = request.POST.get('email', shop.email)
         shop.upi_id = request.POST.get('upi_id', shop.upi_id)
         shop.gst_no = request.POST.get('gst_no', shop.gst_no)
         shop.address = request.POST.get('address', shop.address)
+        shop.pincode = request.POST.get('pincode', shop.pincode)
+        shop.state = request.POST.get('state', shop.state)
         shop.terms = request.POST.get('terms', shop.terms)
         
         # Staff logic

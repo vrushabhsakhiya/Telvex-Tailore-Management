@@ -192,7 +192,13 @@
                 </div>
                 <div class="profile-meta">
                     <h4>{{ shop.shop_name }}</h4>
-                    <p>{{ shop.mobile }}</p>
+                    <p><i class="fa-solid fa-phone"></i> {{ shop.mobile }}</p>
+                    {% if shop.whatsapp %}
+                    <p><i class="fa-brands fa-whatsapp"></i> {{ shop.whatsapp }}</p>
+                    {% endif %}
+                    {% if shop.email %}
+                    <p><i class="fa-solid fa-envelope"></i> {{ shop.email }}</p>
+                    {% endif %}
                     {% if shop.gst_no %}
                     <p>GST: {{ shop.gst_no }}</p>
                     {% endif %}
@@ -201,7 +207,12 @@
 
             <div>
                 <strong>{% trans "Address" %}</strong>
-                <p>{{ shop.address|default:"-" }}</p>
+                <p>
+                    {{ shop.address|default:"-" }}<br>
+                    {% if shop.state or shop.pincode %}
+                    {{ shop.state }} - {{ shop.pincode }}
+                    {% endif %}
+                </p>
             </div>
 
             <div>
@@ -253,7 +264,18 @@
 
             <div>
                 <label for="mobile_input">{% trans "Shop Contact No." %}</label>
-                <input type="text" name="mobile" id="mobile_input" value="{{ shop.mobile }}">
+                <input type="text" name="mobile" id="mobile_input" value="{{ shop.mobile }}" placeholder="+91 98765 43210">
+            </div>
+
+            <div>
+                <label for="whatsapp_input">{% trans "WhatsApp No." %}</label>
+                <input type="text" name="whatsapp" id="whatsapp_input" value="{{ shop.whatsapp }}" placeholder="+91 98765 43210">
+            </div>
+
+            <div class="full">
+                <label for="email_input">{% trans "Business Email" %}</label>
+                <input type="email" name="email" id="email_input" value="{{ shop.email }}" placeholder="contact@shop.com">
+                <div class="form-help">{% trans "Public business email for customers" %}</div>
             </div>
 
             <div>
@@ -263,12 +285,22 @@
 
             <div>
                 <label for="gst_no_input">{% trans "GST / Reg No." %}</label>
-                <input type="text" name="gst_no" id="gst_no_input" value="{{ shop.gst_no }}">
+                <input type="text" name="gst_no" id="gst_no_input" value="{{ shop.gst_no }}" placeholder="e.g. 27AAAP...Z1">
             </div>
 
             <div class="full">
-                <label for="address_input">{% trans "Address" %}</label>
-                <textarea name="address" id="address_input">{{ shop.address }}</textarea>
+                <label for="address_input">{% trans "Physical Address" %}</label>
+                <textarea name="address" id="address_input" placeholder="Shop address details...">{{ shop.address }}</textarea>
+            </div>
+
+            <div>
+                <label for="pincode_input">{% trans "PIN Code" %}</label>
+                <input type="text" name="pincode" id="pincode_input" value="{{ shop.pincode }}" placeholder="e.g. 400001">
+            </div>
+
+            <div>
+                <label for="state_input">{% trans "State" %}</label>
+                <input type="text" name="state" id="state_input" value="{{ shop.state }}" placeholder="e.g. Maharashtra">
             </div>
 
             <div class="full">
