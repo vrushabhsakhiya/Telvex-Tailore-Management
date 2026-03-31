@@ -27,11 +27,13 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-ALLOWED_HOSTS = [
-    "telvex-tailore-management.onrender.com",
-    "localhost",
-    "127.0.0.1"
-]
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'telvex-tailore-management.onrender.com,localhost,127.0.0.1').split(',')
+
+# Add .vercel.app for Vercel deployment if not in DEBUG mode
+if not DEBUG:
+    ALLOWED_HOSTS.append('.vercel.app')
 
 
 # Application definition
@@ -179,5 +181,6 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     CSRF_TRUSTED_ORIGINS = [
         'https://*.vercel.app',
-        'https://' + os.environ.get('VERCEL_URL', '')
+        'https://' + os.environ.get('VERCEL_URL', ''),
+        'https://telvex-tailore-management.onrender.com'
     ]
