@@ -12,6 +12,29 @@ from django.db.utils import OperationalError
 logger = logging.getLogger(__name__)
 
 
+def table_exists(table_name: str, database: str = 'default') -> bool:
+    """
+    Check if a table exists in the given database.
+    
+    Args:
+        table_name: Name of the table to check
+        database: Database alias to check in
+        
+    Returns:
+        bool: True if table exists, False otherwise
+    """
+    try:
+        from django.db import connections
+        with connections[database].cursor() as cursor:
+            cursor.execute(
+                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name=%s)",
+                [table_name],
+            )
+            return cursor.fetchone()[0]
+    except Exception:
+        return False
+
+
 def register_all_shop_databases() -> Dict[str, any]:
     """
     Discover and register all shop databases at startup.
@@ -32,6 +55,12 @@ def register_all_shop_databases() -> Dict[str, any]:
         'errors': []
     }
     
+    # Check if the table exists before querying
+    # This prevents errors during first deployment before migrations run
+    if not table_exists('users_shopprofile', 'default'):
+        logger.debug("ShopProfile table does not exist yet, skipping registration")
+        return result
+
     try:
         # Import here to avoid circular imports
         from .models import ShopProfile
