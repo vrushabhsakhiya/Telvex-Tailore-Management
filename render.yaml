@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: talvex-management
+    env: python
+    buildCommand: ./build.sh
+    startCommand: gunicorn config.wsgi:application
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: taivex # Assuming the DB name matches their settings
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: 3.12.0 # Updated for compatibility
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+
+databases:
+  - name: taivex
+    plan: free # Adjust if necessary
+    databaseName: taivex
+    user: taivexuser

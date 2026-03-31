@@ -95,10 +95,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.environ.get("DATABASE_URL")
+        default=os.getenv("DATABASE_URL", "postgresql://taivexuser:30rbGXfTtcwlJb52yWxE7RFYawfFMU1C@dpg-d75o25muk2gs73dcqvig-a.oregon-postgres.render.com/taivex"),
+        conn_max_age=600,
+        ssl_require=True
     )
 }
 
+# Keep 'main' alias for multi-tenant router compatibility
+DATABASES['main'] = DATABASES['default']
+
+# Database router for multi-tenancy (simplified for single database)
+DATABASE_ROUTERS = ['config.db_router.MultiTenantRouter']
 
 
 # Password validation
