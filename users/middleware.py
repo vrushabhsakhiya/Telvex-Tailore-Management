@@ -32,9 +32,6 @@ class JWTSessionMiddleware:
                 request.staff_name = payload.get('staff_name')
                 request.staff_role = payload.get('staff_role')
                 
-                # Set shop database context
-                self._set_shop_database_context(request)
-                
             except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
                 # Token crashed or expired
                 logout(request)
@@ -44,31 +41,3 @@ class JWTSessionMiddleware:
 
         return self.get_response(request)
     
-    def _set_shop_database_context(self, request):
-        """Set the shop database context for the current request."""
-        try:
-            # Get the user's shop profile
-            shop_profile = getattr(request.user, 'shop_profile', None)
-            
-            if shop_profile and shop_profile.database_name:
-                db_name = shop_profile.database_name
-                
-                if db_name not in settings.DATABASES:
-                    main_db_config = settings.DATABASES['main']
-                    shop_db_config = main_db_config.copy()
-                    shop_db_config.update({
-                        'NAME': db_name,
-                        'ATOMIC_REQUESTS': False,
-                    })
-                    settings.DATABASES[db_name] = shop_db_config
-                
-                # Set the shop database in thread-local storage
-                set_current_shop_db(db_name)
-            else:
-                # Clear any existing shop database context
-                clear_current_shop_db()
-                
-        except Exception as e:
-            # If anything goes wrong, clear the context
-            clear_current_shop_db()
-            print(f"Warning: Failed to set shop database context: {e}")

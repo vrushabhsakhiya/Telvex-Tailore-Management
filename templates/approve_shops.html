@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Shop Approvals{% endblock %}
+
+{% block content %}
+<div style="background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2 style="font-size: 1.5rem; font-weight: 700; color: #111827;">Pending Shop Approvals</h2>
+        <span style="background: #FEF3C7; color: #92400E; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500;">
+            {{ pending_shops.count }} Pending
+        </span>
+    </div>
+
+    {% if pending_shops %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+                <tr style="border-bottom: 2px solid #F3F4F6;">
+                    <th style="padding: 1rem; font-size: 0.875rem; color: #6B7280; font-weight: 600;">Shop Name</th>
+                    <th style="padding: 1rem; font-size: 0.875rem; color: #6B7280; font-weight: 600;">Owner Email</th>
+                    <th style="padding: 1rem; font-size: 0.875rem; color: #6B7280; font-weight: 600;">Mobile</th>
+                    <th style="padding: 1rem; font-size: 0.875rem; color: #6B7280; font-weight: 600;">Registered At</th>
+                    <th style="padding: 1rem; font-size: 0.875rem; color: #6B7280; font-weight: 600;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shop in pending_shops %}
+                <tr style="border-bottom: 1px solid #F3F4F6;">
+                    <td style="padding: 1.25rem 1rem; font-weight: 500; font-size: 0.9375rem;">{{ shop.shop_name }}</td>
+                    <td style="padding: 1.25rem 1rem; color: #6B7280; font-size: 0.875rem;">{{ shop.user.email }}</td>
+                    <td style="padding: 1.25rem 1rem; color: #6B7280; font-size: 0.875rem;">{{ shop.mobile }}</td>
+                    <td style="padding: 1.25rem 1rem; color: #6B7280; font-size: 0.875rem;">{{ shop.created_at|date:"M d, Y" }}</td>
+                    <td style="padding: 1.25rem 1rem;">
+                        <form method="POST" style="display: flex; gap: 0.5rem;">
+                            {% csrf_token %}
+                            <input type="hidden" name="shop_id" value="{{ shop.id }}">
+                            <button type="submit" name="action" value="approve" 
+                                style="background: #10B981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                                Approve
+                            </button>
+                            <button type="submit" name="action" value="reject" 
+                                style="background: #EF4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                                Reject
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 4rem 2rem;">
+        <i class="fa-solid fa-check-circle" style="font-size: 3rem; color: #D1D5DB; margin-bottom: 1rem;"></i>
+        <p style="color: #6B7280; font-size: 1rem;">All caught up! No shops awaiting approval.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

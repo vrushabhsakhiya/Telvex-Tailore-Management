@@ -30,6 +30,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = os.environ.get('DEBUG') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+# Add .vercel.app for Vercel deployment
+if not DEBUG:
+    ALLOWED_HOSTS.append('.vercel.app')
 
 
 # Application definition
@@ -95,66 +98,16 @@ MAIN_DB_CONFIG = dj_database_url.config(
     conn_max_age=600
 )
 
-# Add required ATOMIC_REQUESTS setting
+# Add required ATOMIC_REQUESTS and TIME_ZONE setting
 MAIN_DB_CONFIG['ATOMIC_REQUESTS'] = False
+MAIN_DB_CONFIG['TIME_ZONE'] = None
 
 DATABASES = {
     'default': MAIN_DB_CONFIG,
     'main': MAIN_DB_CONFIG,
 }
 
-# Auto-discover and register shop databases
-def register_shop_databases():
-    """Find and register all existing shop databases."""
-    try:
-        import psycopg2
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-        
-        # Connect to PostgreSQL
-        conn = psycopg2.connect(
-            host=MAIN_DB_CONFIG['HOST'],
-            port=MAIN_DB_CONFIG['PORT'],
-            user=MAIN_DB_CONFIG['USER'],
-            password=MAIN_DB_CONFIG['PASSWORD'],
-            database='postgres'
-        )
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        cursor = conn.cursor()
-        
-        # Find all shop databases
-        cursor.execute("""
-            SELECT datname 
-            FROM pg_database 
-            WHERE datname LIKE 'talvex_shop_%'
-            ORDER BY datname
-        """)
-        shop_dbs = [row[0] for row in cursor.fetchall()]
-        
-        # Register each shop database
-        for db_name in shop_dbs:
-            if db_name not in DATABASES:
-                DATABASES[db_name] = {
-                    'ENGINE': 'django.db.backends.postgresql',
-                    'NAME': db_name,
-                    'USER': MAIN_DB_CONFIG['USER'],
-                    'PASSWORD': MAIN_DB_CONFIG['PASSWORD'],
-                    'HOST': MAIN_DB_CONFIG['HOST'],
-                    'PORT': MAIN_DB_CONFIG['PORT'],
-                    'ATOMIC_REQUESTS': False,
-                }
-                print(f"[DB] Registered shop database: {db_name}")
-        
-        cursor.close()
-        conn.close()
-        
-    except Exception as e:
-        # Don't fail startup if we can't connect
-        print(f"[DB] Warning: Could not register shop databases: {e}")
-
-# Register shop databases at startup
-register_shop_databases()
-
-# Database router for multi-tenancy
+# Database router for multi-tenancy (simplified for single database)
 DATABASE_ROUTERS = ['config.db_router.MultiTenantRouter']
 
 
@@ -218,3 +171,14 @@ SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error']
 
 # Email Backend (Console for Development)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Vercel / Production Security Settings
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    CSRF_TRUSTED_ORIGINS = [
+        'https://*.vercel.app',
+        'https://' + os.environ.get('VERCEL_URL', '')
+    ]

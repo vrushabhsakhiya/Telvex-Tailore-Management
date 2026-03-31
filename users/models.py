@@ -58,6 +58,7 @@ class ShopProfile(models.Model):
     staff_pins = models.JSONField(default=dict, blank=True) # Map of {staff_name: pin}
     database_name = models.CharField(max_length=100, blank=True, null=True) # Track shop's database
     is_active = models.BooleanField(default=True) # Shop status
+    is_approved = models.BooleanField(default=False) # Super Admin approval
     created_at = models.DateTimeField(auto_now_add=True, null=True) # Allow null for existing data
     updated_at = models.DateTimeField(auto_now=True, null=True) # Allow null for existing data
 

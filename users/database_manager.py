@@ -178,22 +178,12 @@ class ShopDatabaseManager:
         # Get main database configuration as template
         main_db_config = settings.DATABASES.get('main', settings.DATABASES['default'])
         
-        # Create shop database configuration
-        shop_db_config = {
-            'ENGINE': main_db_config.get('ENGINE', 'django.db.backends.postgresql'),
+        # Create shop database configuration based on main template
+        shop_db_config = main_db_config.copy()
+        shop_db_config.update({
             'NAME': db_name,
-            'USER': main_db_config.get('USER', ''),
-            'PASSWORD': main_db_config.get('PASSWORD', ''),
-            'HOST': main_db_config.get('HOST', 'localhost'),
-            'PORT': main_db_config.get('PORT', '5432'),
             'ATOMIC_REQUESTS': False,
-            'CONN_MAX_AGE': main_db_config.get('CONN_MAX_AGE', 600),
-        }
-        
-        # Copy additional options if present
-        for key in ['OPTIONS', 'CONN_HEALTH_CHECKS']:
-            if key in main_db_config:
-                shop_db_config[key] = main_db_config[key]
+        })
         
         return shop_db_config
     

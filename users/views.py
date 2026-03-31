@@ -57,14 +57,14 @@ def register_view(request):
             user.is_admin = True # The person signing up is the shop owner/admin
             user.save()
 
-            # Create Shop Profile with provided data
+            # Create Shop Profile with provided data (is_approved=False by default)
             ShopProfile.objects.create(
                 user=user, 
                 shop_name=shop_name,
                 mobile=mobile
             )
 
-            messages.success(request, 'Shop account created successfully! Please login.')
+            messages.success(request, 'Shop account created successfully! Please wait for admin approval before logging in.')
             return redirect('login')
         except Exception as e:
             messages.error(request, f'Error: {e}')
@@ -78,10 +78,20 @@ def login_view(request):
         email = request.POST.get('username') # Form uses 'username' name for email input
         password = request.POST.get('password')
         
+        # 1. Basic Rate Limiting / Lock Check
+        user_candidate = User.objects.filter(username=email).first() or User.objects.filter(email=email).first()
+        if user_candidate and user_candidate.locked_until and user_candidate.locked_until > timezone.now():
+            messages.error(request, 'Account locked due to multiple failed attempts. Please try again later.')
+            return render(request, 'login.html')
+
         user = authenticate(request, username=email, password=password)
         
         if user is not None:
-            # Login successful: Start 2FA
+            # Success! Reset failure count
+            user.failed_attempts = 0
+            user.locked_until = None
+            
+            # Start 2FA Flow
             otp = ''.join(random.choices(string.digits, k=6))
             user.otp_code = otp
             user.otp_expiry = timezone.now() + timedelta(minutes=10)
@@ -95,15 +105,39 @@ def login_view(request):
             }
             temp_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
 
-            # Mock Send Email / Print to Console
-            print(f"\n{'='*20}\n OTP GENERATED: {otp} \n{'='*20}\n")
-            messages.info(request, f'OTP sent to your email. (Dev: {otp})')
+            # Send OTP via Email
+            try:
+                send_mail(
+                    subject='Login OTP - Telvex',
+                    message=f'Your login OTP is: {otp}. It expires in 10 minutes.',
+                    from_email=None,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+                messages.info(request, f'OTP sent to your email.')
+            except Exception:
+                # Fallback for dev if email not configured
+                if settings.DEBUG:
+                    messages.warning(request, f'Email delivery failed. Dev OTP: {otp}')
+                else:
+                    messages.error(request, 'Failed to send OTP. Please contact support.')
+                    return redirect('login')
 
             # Store in session and redirect
             request.session['pending_otp_token'] = temp_token
             return redirect('verify_otp')
         else:
-            messages.error(request, 'Invalid email or password')
+            # Failed attempt: Increment counter
+            if user_candidate:
+                user_candidate.failed_attempts += 1
+                if user_candidate.failed_attempts >= 5:
+                    user_candidate.locked_until = timezone.now() + timedelta(minutes=5)
+                    messages.error(request, 'Too many failed attempts. Account locked for 5 minutes.')
+                else:
+                    messages.error(request, f'Invalid credentials. {5 - user_candidate.failed_attempts} attempts remaining.')
+                user_candidate.save()
+            else:
+                messages.error(request, 'Invalid email or password')
     
     return render(request, 'login.html')
 
@@ -122,6 +156,10 @@ def verify_otp_view(request):
         otp = request.POST.get('otp')
         if otp == user.otp_code and user.otp_expiry > timezone.now():
             # Final Login
+            if not user.is_superuser and hasattr(user, 'shop_profile') and not user.shop_profile.is_approved:
+                messages.warning(request, 'Your shop account is awaiting admin approval.')
+                return redirect('login')
+
             login(request, user)
             user.otp_code = None
             user.is_verified = True
@@ -499,27 +537,28 @@ def forgot_password_view(request):
         
         if user:
             otp = ''.join(random.choices(string.digits, k=6))
-            request.session['reset_email'] = user.email # Use found user email
-            request.session['reset_otp'] = otp
+            user.otp_code = otp
+            user.otp_expiry = timezone.now() + timedelta(minutes=15)
+            user.save()
             
-            # Send Email (Uses Backend defined in settings)
+            request.session['reset_email'] = user.email 
+            
+            # Send Email
             try:
                 send_mail(
-                    subject='Password Reset OTP',
-                    message=f'Your OTP to reset password is: {otp}',
-                    from_email=None, # Default
+                    subject='Password Reset OTP - Telvex',
+                    message=f'Your secret OTP to reset your password is: {otp}. Valid for 15 minutes.',
+                    from_email=None, 
                     recipient_list=[user.email],
                     fail_silently=False,
                 )
-                print(f"PASSWORD RESET OTP for {user.email}: {otp}") # Keep log just in case
-                messages.success(request, f'OTP sent to {user.email}. (Dev: {otp})') # Show OTP in UI for ease
-            except Exception as e:
-                print(f"Email Send Failed: {e}")
-                messages.warning(request, f"Could not send email, but OTP is: {otp} (Console)")
+                messages.success(request, f'Password reset OTP sent to {user.email}.')
+            except Exception:
+                messages.error(request, "Failed to send reset email. Please try again.")
 
             return redirect('reset_password')
         else:
-            messages.error(request, 'Email not found in our records.')
+            messages.error(request, 'No account found with that email.')
             
     return render(request, 'forgot_password.html')
 
@@ -529,30 +568,59 @@ def reset_password_view(request):
         password = request.POST.get('password')
         confirm = request.POST.get('confirm_password')
         
-        session_otp = request.session.get('reset_otp')
         session_email = request.session.get('reset_email')
         
-        if not session_email or not session_otp:
+        if not session_email:
             messages.error(request, 'Session expired. Please try again.')
             return redirect('forgot_password')
             
-        if otp != session_otp:
-            messages.error(request, 'Invalid OTP.')
+        user = User.objects.filter(email=session_email).first() or User.objects.filter(username=session_email).first()
+        
+        if not user or user.otp_code != otp or (user.otp_expiry and user.otp_expiry < timezone.now()):
+            messages.error(request, 'Invalid or expired OTP.')
             return redirect('reset_password')
             
         if password != confirm:
             messages.error(request, 'Passwords do not match.')
-            return redirect('reset_password')
+            return render(request, 'reset_password.html')
             
-        user = User.objects.filter(username=session_email).first()
-        if user:
-            user.set_password(password)
-            user.save()
-            del request.session['reset_otp']
-            del request.session['reset_email']
-            messages.success(request, 'Password reset successfully. Please login.')
-            return redirect('login')
-        else:
-            messages.error(request, 'User not found.')
+        # Success
+        user.set_password(password)
+        user.otp_code = None # Clear OTP
+        user.otp_expiry = None
+        user.failed_attempts = 0 # Reset lock if they were locked
+        user.locked_until = None
+        user.save()
+        
+        del request.session['reset_email']
+        messages.success(request, 'Password reset successfully. Please login.')
+        return redirect('login')
             
     return render(request, 'reset_password.html')
+
+@login_required
+def approve_shops_view(request):
+    """
+    Super Admin view to list and approve pending shop registrations.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, 'Unauthorized access.')
+        return redirect('dashboard')
+    
+    pending_shops = ShopProfile.objects.filter(is_approved=False).select_related('user')
+    
+    if request.method == 'POST':
+        shop_id = request.POST.get('shop_id')
+        action = request.POST.get('action') # 'approve' or 'reject'
+        
+        shop = get_object_or_404(ShopProfile, id=shop_id)
+        if action == 'approve':
+            shop.is_approved = True
+            shop.save()
+            messages.success(request, f"Shop '{shop.shop_name}' approved!")
+        elif action == 'reject':
+            messages.info(request, f"Review for '{shop.shop_name}' completed.")
+
+        return redirect('approve_shops')
+
+    return render(request, 'approve_shops.html', {'pending_shops': pending_shops})
