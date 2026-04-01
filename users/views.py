@@ -30,7 +30,7 @@ def register_view(request):
         # 2. Velocity Check (No Human registers in < 5 seconds)
         reg_start = request.session.get('register_load_time', 0)
         time_diff = time.time() - reg_start
-        if time_diff < 5:
+        if reg_start > 0 and time_diff < 5:
              # Too fast, probably a bot
              messages.error(request, 'Registration failed. Please try again.')
              return redirect('register')
@@ -74,7 +74,12 @@ def register_view(request):
             messages.error(request, f'Error: {e}')
             return redirect('register')
 
-    request.session['register_load_time'] = time.time()
+    try:
+        request.session['register_load_time'] = time.time()
+    except Exception:
+        # Fails gracefully if session DB table isn't fully migrated yet
+        pass
+        
     return render(request, 'register.html')
 
 def login_view(request):
