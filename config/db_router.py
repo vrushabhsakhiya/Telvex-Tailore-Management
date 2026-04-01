@@ -10,17 +10,24 @@ class MultiTenantRouter:
     Simplified router for deployment. Routes all queries to the main database.
     Multi-tenancy is handled via the 'user' foreign key on all models.
     """
-    
     def db_for_read(self, model, **hints):
+        if model._meta.app_label in ['admin', 'auth', 'contenttypes', 'sessions']:
+            return 'default'
         return 'main'
     
     def db_for_write(self, model, **hints):
+        if model._meta.app_label in ['admin', 'auth', 'contenttypes', 'sessions']:
+            return 'default'
         return 'main'
     
     def allow_relation(self, obj1, obj2, **hints):
         return True
     
     def allow_migrate(self, db, app_label, model_name=None, **hints):
-        # Allow all migrations on both 'default' and 'main' database aliases
+        # Always run migrations for built-in apps on default
+        if app_label in ['admin', 'auth', 'contenttypes', 'sessions']:
+            return db == 'default'
+            
+        # Allow all other migrations on both 'default' and 'main' database aliases
         # This ensures tables are created during standard deployment
         return db in ['default', 'main']
