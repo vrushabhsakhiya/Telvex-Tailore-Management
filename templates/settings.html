@@ -215,6 +215,15 @@
                 </p>
             </div>
 
+            {% if shop.upi_qr %}
+            <div>
+                <strong>{% trans "Payment QR Code" %}</strong>
+                <div style="width: 150px; height: 150px; margin-top: 0.5rem; background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem;">
+                    <img src="{{ shop.upi_qr.url }}" alt="UPI QR" style="width: 100%; height: 100%; object-fit: contain;">
+                </div>
+            </div>
+            {% endif %}
+
             <div>
                 <strong>{% trans "Bill Terms & Conditions" %}</strong>
                 <p>{{ shop.terms|default:"-" }}</p>
@@ -279,8 +288,23 @@
             </div>
 
             <div>
-                <label for="upi_id_input">{% trans "UPI ID (for QR Code)" %}</label>
+                <label for="upi_id_input">{% trans "UPI ID" %}</label>
                 <input type="text" name="upi_id" id="upi_id_input" value="{{ shop.upi_id }}" placeholder="e.g. shopname@okicici">
+            </div>
+
+            <div class="full">
+                <label for="upi_qr_input">{% trans "Manual Payment QR Image" %}</label>
+                {% if shop.upi_qr %}
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px;">
+                    <img src="{{ shop.upi_qr.url }}" alt="Current QR" style="width: 60px; height: 60px; object-fit: contain; border-radius: 4px; background: white;">
+                    <label for="delete_qr_input" style="color:var(--danger-color);font-size:0.8rem;">
+                        <input type="checkbox" name="delete_qr" id="delete_qr_input">
+                        {% trans "Delete Current QR" %}
+                    </label>
+                </div>
+                {% endif %}
+                <input type="file" name="upi_qr" id="upi_qr_input" accept="image/*">
+                <div class="form-help">{% trans "Upload your manual QR image. If set, this will be used on invoices." %}</div>
             </div>
 
             <div>

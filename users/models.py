@@ -22,20 +22,6 @@ class User(AbstractUser):
     is_admin = models.BooleanField(default=False)
     
     # created_at handled by date_joined in AbstractUser
-    
-    # Subscription
-    subscription_end_date = models.DateField(blank=True, null=True)
-
-    def is_subscription_active(self):
-        """
-        Returns True if subscription is active (or user is admin/superuser).
-        Active means end_date is in the future.
-        """
-        if self.is_superuser or self.is_staff:
-            return True
-        if not self.subscription_end_date:
-            return False # No date set = Expired/Not Active
-        return self.subscription_end_date >= timezone.now().date()
 
     def __str__(self):
         return self.username
@@ -64,6 +50,7 @@ class ShopProfile(models.Model):
     upi_id = models.CharField(max_length=50, blank=True, help_text="UPI ID for digital payments")
     terms = models.TextField(blank=True, help_text="Default terms and conditions for bills")
     logo = models.CharField(max_length=200, blank=True) # Storing path as string to match legacy structure
+    upi_qr = models.ImageField(upload_to='shop/qrs/', blank=True, null=True, help_text="Upload your own UPI QR Code image")
     
     # Staff & Role Management (JSON Configuration)
     bill_creators = models.JSONField(default=list, blank=True) # List of staff names

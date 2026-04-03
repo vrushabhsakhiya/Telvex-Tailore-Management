@@ -98,7 +98,7 @@ def register_view(request):
                 gst_no=gst_no
             )
 
-            messages.success(request, 'Shop account created successfully! Please wait for admin approval before logging in.')
+            messages.success(request, 'Shop account created successfully! Please wait for admin approval.')
             return redirect('login')
         except Exception as e:
             messages.error(request, f'Error: {e}')
@@ -194,18 +194,15 @@ def login_view(request):
                 )
                 messages.info(request, f'OTP sent to your email: {user.email}')
             except Exception as e:
-                # Fallback for dev if email not configured
                 if settings.DEBUG:
                     messages.warning(request, f'Email delivery failed. Dev OTP: {otp}. Error: {str(e)}')
                 else:
                     messages.error(request, 'Failed to send OTP. Please contact support.')
                     return redirect('login')
 
-            # Store in session and redirect
             request.session['pending_otp_token'] = temp_token
             return redirect('verify_otp')
         else:
-            # Failed attempt: Increment counter
             if user_candidate:
                 user_candidate.failed_attempts += 1
                 if user_candidate.failed_attempts >= 5:
@@ -217,18 +214,17 @@ def login_view(request):
             else:
                 messages.error(request, 'Invalid email or password')
     
-    return render(request, 'login.html')
+    return render(request, LOGIN_TEMPLATE)
 
 def verify_otp_view(request):
     token = request.session.get('pending_otp_token')
     if not token:
         return redirect('login')
     
-    # IP Rate Limiting for OTP Verification
     ip = request.META.get('REMOTE_ADDR')
     cache_key = f'ratelimit_otp_{ip}'
     attempts = cache.get(cache_key, 0)
-    if attempts >= 10: # Max 10 attempts per 5 mins
+    if attempts >= 10: 
          messages.error(request, 'Too many OTP attempts. Please wait.')
          return redirect('login')
     cache.set(cache_key, attempts + 1, 300)
@@ -242,17 +238,11 @@ def verify_otp_view(request):
     if request.method == 'POST':
         otp = request.POST.get('otp')
         if otp == user.otp_code and user.otp_expiry > timezone.now():
-            # Final Login
-            if not user.is_superuser and hasattr(user, 'shop_profile') and not user.shop_profile.is_approved:
-                messages.warning(request, 'Your shop account is awaiting admin approval.')
-                return redirect('login')
-
             login(request, user)
             user.otp_code = None
             user.is_verified = True
             user.save()
             
-            # Generate Long-lived JWT for extra security layer / API access
             final_payload = {
                 'user_id': user.id,
                 'username': user.username,
@@ -262,7 +252,7 @@ def verify_otp_view(request):
             final_token = jwt.encode(final_payload, settings.SECRET_KEY, algorithm='HS256')
             
             request.session.pop('pending_otp_token', None)
-            response = redirect('home')
+            response = redirect('dashboard')
             response.set_cookie('access_token', final_token, httponly=True, secure=True)
             return response
         else:
@@ -271,11 +261,8 @@ def verify_otp_view(request):
     return render(request, 'otp_verify.html', {'email': user.email})
 
 def staff_login_view(request):
-    """
-    Separate login for staff members using Shop Email + Staff Name + PIN.
-    """
     if request.user.is_authenticated:
-        return redirect('home')
+        return redirect('dashboard')
 
     if request.method == 'POST':
         shop_email = request.POST.get('shop_email', '').strip()
@@ -285,24 +272,19 @@ def staff_login_view(request):
         user = User.objects.filter(email=shop_email).first()
         if user and hasattr(user, 'shop_profile'):
             shop = user.shop_profile
-            # Validate Staff and PIN
             if staff_name in shop.bill_creators and shop.staff_pins.get(staff_name) == pin:
-                # Login as the Shop Owner
                 login(request, user)
-                
-                # Generate Long-lived JWT with Staff Claims
                 payload = {
                     'user_id': user.id,
                     'username': user.username,
-                    'staff_name': staff_name,                 # Custom Claim
-                    'staff_role': shop.staff_roles.get(staff_name, 'Staff'), # Custom Claim
+                    'staff_name': staff_name,
+                    'staff_role': shop.staff_roles.get(staff_name, 'Staff'),
                     'iat': int(time.time()),
-                    'exp': int(time.time()) + 86400 * 7 # 7 days
+                    'exp': int(time.time()) + 86400 * 7 
                 }
                 token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
-                
                 messages.success(request, f"Welcome back, {staff_name}!")
-                response = redirect('home')
+                response = redirect('dashboard')
                 response.set_cookie('access_token', token, httponly=True, secure=True)
                 return response
             
@@ -319,9 +301,6 @@ def logout_view(request):
 
 @login_required
 def admin_delete_user(request, user_id):
-    """
-    Admin only: Remove a shop owner and all their data.
-    """
     if not request.user.is_superuser:
         messages.error(request, 'Unauthorized access.')
         return redirect('dashboard')
@@ -331,8 +310,8 @@ def admin_delete_user(request, user_id):
         messages.error(request, 'Cannot delete superuser.')
         return redirect('dashboard')
         
-    target_user.delete() # CASCADE will remove ShopProfile, Orders, Customers etc.
-    messages.success(request, f'User {target_user.email} and all associated data removed.')
+    target_user.delete()
+    messages.success(request, f'User {target_user.email} removed.')
     return redirect('dashboard')
 
 @login_required
@@ -345,58 +324,37 @@ def settings_view(request):
     return render(request, 'settings.html', {'shop': shop, 'active_page': 'settings'})
 
 def _handle_logo_upload(request, shop):
-    """Helper to save shop logo."""
     if not request.FILES.get('logo'):
         return
-    
     logo_file = request.FILES['logo']
-    from django.core.files.storage import FileSystemStorage
-    upload_path = f"uploads/users/{request.user.id}/shop/"
+    upload_path = f"uploads/users/{request.user.id}/shop/logo/"
     target_dir = os.path.join(settings.MEDIA_ROOT, upload_path)
     os.makedirs(target_dir, exist_ok=True)
-    
     fs = FileSystemStorage(location=target_dir, base_url=f"{settings.MEDIA_URL}{upload_path}")
     filename = fs.save(logo_file.name, logo_file)
     shop.logo = fs.url(filename)
 
-def send_whatsapp_notification(mobile, message):
-    """
-    Utility to open WhatsApp with a pre-filled message.
-    Used for order ready / bill sent notifications.
-    """
-    encoded_msg = urllib.parse.quote(message)
-    # Remove non-digits and add 91 if needed
-    clean_mobile = ''.join(filter(str.isdigit, str(mobile)))
-    if len(clean_mobile) == 10:
-        clean_mobile = "91" + clean_mobile
-    
-    return f"https://wa.me/{clean_mobile}?text={encoded_msg}"
+def _handle_qr_upload(request, shop):
+    if not request.FILES.get('upi_qr'):
+        return
+    shop.upi_qr = request.FILES['upi_qr']
 
 @login_required
 def delete_staff(request, staff_name):
     if hasattr(request, 'staff_name') and request.staff_name:
         return redirect('dashboard')
-        
-    """
-    Removes a staff member from the shop's bill_creators list and roles.
-    """
     if request.method == 'POST':
         shop = get_object_or_404(ShopProfile, user=request.user)
         if staff_name in shop.bill_creators:
             creators = list(shop.bill_creators)
             creators.remove(staff_name)
             shop.bill_creators = creators
-            
             roles = dict(shop.staff_roles)
-            if staff_name in roles:
-                del roles[staff_name]
+            if staff_name in roles: del roles[staff_name]
             shop.staff_roles = roles
-            
             pins = dict(shop.staff_pins)
-            if staff_name in pins:
-                del pins[staff_name]
+            if staff_name in pins: del pins[staff_name]
             shop.staff_pins = pins
-            
             shop.save()
             messages.success(request, f"Staff '{staff_name}' removed.")
         return redirect('settings')
@@ -406,16 +364,12 @@ def delete_staff(request, staff_name):
 def update_shop_profile(request):
     if hasattr(request, 'staff_name') and request.staff_name:
         return redirect('dashboard')
-
     if request.method != 'POST':
         return redirect('settings')
-        
     try:
         shop = ShopProfile.objects.filter(user=request.user).first()
         if not shop:
             shop = ShopProfile.objects.create(user=request.user, shop_name=request.user.first_name)
-        
-        # Core details
         shop.shop_name = request.POST.get('shop_name', shop.shop_name)
         shop.mobile = request.POST.get('mobile', shop.mobile)
         shop.whatsapp = request.POST.get('whatsapp', shop.whatsapp)
@@ -426,311 +380,158 @@ def update_shop_profile(request):
         shop.pincode = request.POST.get('pincode', shop.pincode)
         shop.state = request.POST.get('state', shop.state)
         shop.terms = request.POST.get('terms', shop.terms)
-        
-        # Staff logic
         new_staff_name = request.POST.get('new_staff_name', '').strip()
         new_staff_role = request.POST.get('new_staff_role', 'Staff').strip()
         new_staff_pin = request.POST.get('new_staff_pin', '').strip()
-        
         if new_staff_name:
             creators = list(shop.bill_creators)
             if new_staff_name not in creators:
                 creators.append(new_staff_name)
                 shop.bill_creators = creators
-                
                 roles = dict(shop.staff_roles)
                 roles[new_staff_name] = new_staff_role
                 shop.staff_roles = roles
-                
                 if new_staff_pin:
                     pins = dict(shop.staff_pins)
                     pins[new_staff_name] = new_staff_pin
                     shop.staff_pins = pins
-        
-        # Logo logic
         _handle_logo_upload(request, shop)
-        if request.POST.get('delete_logo'):
-            shop.logo = ''
-            
+        if request.POST.get('delete_logo'): shop.logo = ''
+        _handle_qr_upload(request, shop)
+        if request.POST.get('delete_qr'): shop.upi_qr = None
         shop.save()
         messages.success(request, 'Shop profile updated successfully!')
-        
     except Exception as e:
-        messages.error(request, f"Error updating profile: {str(e)}")
-        
+        messages.error(request, f"Error: {e}")
     return redirect('settings')
 
 @login_required
 def protected_media(request, path):
-    """
-    Serves media files only if they belong to the authenticated user.
-    Path expected: 'uploads/users/<user_id>/...'
-    """
-    # 1. Basic Traversal Protection
     document_root = os.path.abspath(settings.MEDIA_ROOT)
     clean_path = os.path.normpath(path).lstrip(os.sep)
     full_path = os.path.abspath(os.path.join(document_root, clean_path))
-    
-    if os.path.commonpath([document_root, full_path]) != document_root:
-         raise Http404("Access Denied")
-
-    # 2. Ownership Verification
-    # Expected path structure: uploads/users/<user_id>/...
-    # We allow 'public' assets if needed, but for now strict lockdown on 'uploads/users/'
-    
+    if os.path.commonpath([document_root, full_path]) != document_root: raise Http404()
     path_parts = clean_path.replace('\\', '/').split('/')
-    
     if len(path_parts) >= 3 and path_parts[0] == 'uploads' and path_parts[1] == 'users':
         try:
-            param_user_id = int(path_parts[2])
-            if param_user_id != request.user.id:
-                # Security Violation: User trying to access another user's files
-                return HttpResponse("Forbidden: You do not have permission to access this file.", status=403)
-        except ValueError:
-            # path didn't have a valid int for user_id
-            raise Http404("Invalid Path")
+            if int(path_parts[2]) != request.user.id: return HttpResponse("Forbidden", status=403)
+        except ValueError: raise Http404()
+    if os.path.exists(full_path): return FileResponse(open(full_path, 'rb'))
+    raise Http404()
 
-    if os.path.exists(full_path):
-        return FileResponse(open(full_path, 'rb'))
-    raise Http404
-
-from django.http import HttpResponse
 import csv
 from customers.models import Customer
-from store.models import Order, Category, Reminder, Measurement
+from store.models import Order, Category, Measurement
 
 def _get_export_data(data_type, user, date_range):
-    """Filters data for export based on type."""
-    if data_type == 'orders':
-        return Order.objects.filter(user=user, created_at__date__range=date_range)
-    elif data_type == 'customers':
-        return Customer.objects.filter(user=user, created_date__date__range=date_range)
-    elif data_type == 'measurements':
-        return Measurement.objects.filter(user=user, date__date__range=date_range)
-    elif data_type == 'bills': # Added for 'bills' data type
-        return Order.objects.filter(user=user, created_at__date__range=date_range)
+    if data_type == 'orders': return Order.objects.filter(user=user, created_at__date__range=date_range)
+    if data_type == 'customers': return Customer.objects.filter(user=user, created_date__date__range=date_range)
+    if data_type == 'measurements': return Measurement.objects.filter(user=user, date__date__range=date_range)
+    if data_type == 'bills': return Order.objects.filter(user=user, created_at__date__range=date_range)
     return Order.objects.none()
 
 def _write_csv_data(writer, data_type, queryset):
-    """Helper method to handle the field mappings for different CSV exports."""
     if data_type == 'orders':
         writer.writerow(['Order ID', 'Customer', 'Mobile', 'Total Amount', 'Advance', 'Balance', 'Work Status', 'Payment Status', 'Delivery Date'])
-        for o in queryset: 
-            writer.writerow([
-                o.id, o.customer.name, o.customer.mobile, o.total_amt, 
-                o.advance, o.balance, o.work_status, o.payment_status, o.delivery_date
-            ])
+        for o in queryset: writer.writerow([o.id, o.customer.name, o.customer.mobile, o.total_amt, o.advance, o.balance, o.work_status, o.payment_status, o.delivery_date])
     elif data_type == 'customers':
         writer.writerow(['Name', 'Mobile', 'Gender', 'City', 'Area', 'Total Orders', 'Pending Balance'])
-        for c in queryset: 
-            writer.writerow([
-                c.name, c.mobile, c.gender, c.city, c.area, c.orders.count(), c.total_pending
-            ])
+        for c in queryset: writer.writerow([c.name, c.mobile, c.gender, c.city, c.area, c.orders.count(), c.total_pending])
     elif data_type == 'measurements':
         writer.writerow(['Customer', 'Mobile', 'Category', 'Date', 'Measurements', 'Remarks'])
-        for m in queryset: 
-            writer.writerow([
-                m.customer.name, m.customer.mobile, m.category.name,
-                m.date.date(), str(m.measurements_json), m.remarks
-            ])
+        for m in queryset: writer.writerow([m.customer.name, m.customer.mobile, m.category.name, m.date.date(), str(m.measurements_json), m.remarks])
     elif data_type == 'bills':
-        writer.writerow(['Bill/Order ID', 'Customer', 'Total', 'Paid', 'Balance', 'Date'])
-        for o in queryset:
-            writer.writerow([
-                o.id, o.customer.name, o.total_amt, o.advance, o.balance, o.created_at.date()
-            ])
+        writer.writerow(['Bill ID', 'Customer', 'Total', 'Paid', 'Balance', 'Date'])
+        for o in queryset: writer.writerow([o.id, o.customer.name, o.total_amt, o.advance, o.balance, o.created_at.date()])
 
 @login_required
 def export_custom_data(request):
-    if hasattr(request, 'staff_name') and request.staff_name:
-        return redirect('dashboard')
-
-    if request.method != 'POST':
-        return redirect('settings')
-        
+    if hasattr(request, 'staff_name') and request.staff_name: return redirect('dashboard')
+    if request.method != 'POST': return redirect('settings')
     try:
-        params = request.POST
-        date_range = [params.get('start_date'), params.get('end_date')]
-        data_type = params.get('data_type')
-        
-        export_dir = os.path.join(settings.MEDIA_ROOT, 'exports', timezone.now().strftime('%Y/%m'))
-        os.makedirs(export_dir, exist_ok=True)
-        
-        filename = f"{data_type}_{params.get('start_date')}_to_{params.get('end_date')}.csv"
-        file_path = os.path.join(export_dir, filename)
-        
+        data_type = request.POST.get('data_type')
+        date_range = [request.POST.get('start_date'), request.POST.get('end_date')]
         queryset = _get_export_data(data_type, request.user, date_range)
-        
-        with open(file_path, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            _write_csv_data(writer, data_type, queryset)
-        
-        response = FileResponse(open(file_path, 'rb'), as_attachment=True, filename=filename)
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{data_type}_export.csv"'
+        writer = csv.writer(response)
+        _write_csv_data(writer, data_type, queryset)
         return response
     except Exception as e:
-        messages.error(request, f"Export failed: {str(e)}")
+        messages.error(request, f"Export failed: {e}")
         return redirect('settings')
 
 @login_required
 def download_backup(request):
-    if hasattr(request, 'staff_name') and request.staff_name:
-        return redirect('dashboard')
-    
+    if hasattr(request, 'staff_name') and request.staff_name: return redirect('dashboard')
     from django.core import serializers
-    from django.http import HttpResponse
     from store.models import Category, Order, Measurement, Reminder
-    from customers.models import Customer
-    
-    # Securely collect ONLY the current user's data
-    user_data = []
-    user_data.extend(ShopProfile.objects.filter(user=request.user))
-    user_data.extend(Category.objects.filter(user=request.user))
-    user_data.extend(Customer.objects.filter(user=request.user))
-    user_data.extend(Measurement.objects.filter(user=request.user))
-    user_data.extend(Order.objects.filter(user=request.user))
-    user_data.extend(Reminder.objects.filter(user=request.user))
-    
-    # Serialize to a secure JSON dump
+    user_data = list(ShopProfile.objects.filter(user=request.user))
+    user_data += list(Category.objects.filter(user=request.user))
+    user_data += list(Customer.objects.filter(user=request.user))
+    user_data += list(Measurement.objects.filter(user=request.user))
+    user_data += list(Order.objects.filter(user=request.user))
+    user_data += list(Reminder.objects.filter(user=request.user))
     json_data = serializers.serialize('json', user_data)
-    
-    filename = f"talvex_secure_backup_{timezone.now().strftime('%Y%m%d_%H%M%S')}.json"
     response = HttpResponse(json_data, content_type='application/json')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Content-Disposition'] = 'attachment; filename="backup.json"'
     return response
 
 @login_required
 def reset_data(request):
-    if hasattr(request, 'staff_name') and request.staff_name:
-        return redirect('dashboard')
-
+    if hasattr(request, 'staff_name') and request.staff_name: return redirect('dashboard')
     if request.method == 'POST':
-        # Delete Everything for this user except Account and ShopProfile
-        try:
-            Order.objects.filter(user=request.user).delete()
-            Measurement.objects.filter(user=request.user).delete()
-            Reminder.objects.filter(user=request.user).delete()
-            Category.objects.filter(user=request.user, is_custom=True).delete() # Only custom cats? Or all? User owns all cats usually.
-            Customer.objects.filter(user=request.user).delete()
-            
-            messages.success(request, 'All system data (Orders, Customers, Measurements) has been reset successfully.')
-        except Exception as e:
-            messages.error(request, f'Error resetting data: {str(e)}')
-            
+        from store.models import Order, Measurement, Reminder, Category
+        Order.objects.filter(user=request.user).delete()
+        Measurement.objects.filter(user=request.user).delete()
+        Reminder.objects.filter(user=request.user).delete()
+        Category.objects.filter(user=request.user, is_custom=True).delete()
+        Customer.objects.filter(user=request.user).delete()
+        messages.success(request, 'Data reset.')
     return redirect('settings')
-
-from django.core.mail import send_mail
 
 def forgot_password_view(request):
     if request.method == 'POST':
         email = request.POST.get('email')
-        # Try finding by email field first, then username
         user = User.objects.filter(email=email).first() or User.objects.filter(username=email).first()
-        
         if user:
             otp = ''.join(random.choices(string.digits, k=6))
             user.otp_code = otp
             user.otp_expiry = timezone.now() + timedelta(minutes=15)
             user.save()
-            
-            request.session['reset_email'] = user.email 
-            
-            # Send Reset Email (Real Email Sending)
-            reset_html = f"""
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #ef4444; text-align: center;">Telvex Password Reset</h2>
-                <p>Hello,</p>
-                <p>We received a request to reset your password. Use the secret OTP below to proceed:</p>
-                <div style="background: #fef2f2; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #991b1b; border-radius: 8px; margin: 20px 0; border: 1px dashed #ef4444;">
-                    {otp}
-                </div>
-                <p style="color: #64748b; font-size: 14px;">This code is valid for 15 minutes. <strong>Never share this OTP with anyone.</strong></p>
-                <p style="color: #64748b; font-size: 14px;">If you didn't request a password reset, you can safely ignore this email.</p>
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; {timezone.now().year} Telvex. All rights reserved.</p>
-            </div>
-            """
-
-            try:
-                send_mail(
-                    subject='Password Reset OTP - Telvex',
-                    message=f'Your secret OTP to reset your password is: {otp}. Valid for 15 minutes.',
-                    from_email=settings.DEFAULT_FROM_EMAIL, 
-                    recipient_list=[user.email],
-                    html_message=reset_html,
-                    fail_silently=False,
-                )
-                messages.success(request, f'Password reset OTP sent to {user.email}.')
-            except Exception as e:
-                if settings.DEBUG:
-                    messages.warning(request, f"Failed to send reset email. Dev OTP: {otp}. Error: {str(e)}")
-                else:
-                    messages.error(request, "Failed to send reset email. Please try again.")
-
+            request.session['reset_email'] = user.email
+            send_mail('Reset OTP', f'Code: {otp}', settings.DEFAULT_FROM_EMAIL, [user.email])
+            messages.success(request, 'OTP sent.')
             return redirect('reset_password')
-        else:
-            messages.error(request, 'No account found with that email.')
-            
     return render(request, 'forgot_password.html')
 
 def reset_password_view(request):
     if request.method == 'POST':
-        otp = request.POST.get('otp')
-        password = request.POST.get('password')
-        confirm = request.POST.get('confirm_password')
-        
-        session_email = request.session.get('reset_email')
-        
-        if not session_email:
-            messages.error(request, 'Session expired. Please try again.')
-            return redirect('forgot_password')
-            
-        user = User.objects.filter(email=session_email).first() or User.objects.filter(username=session_email).first()
-        
-        if not user or user.otp_code != otp or (user.otp_expiry and user.otp_expiry < timezone.now()):
-            messages.error(request, 'Invalid or expired OTP.')
-            return redirect('reset_password')
-            
-        if password != confirm:
-            messages.error(request, 'Passwords do not match.')
-            return render(request, 'reset_password.html')
-            
-        # Success
-        user.set_password(password)
-        user.otp_code = None # Clear OTP
-        user.otp_expiry = None
-        user.failed_attempts = 0 # Reset lock if they were locked
-        user.locked_until = None
-        user.save()
-        
-        del request.session['reset_email']
-        messages.success(request, 'Password reset successfully. Please login.')
-        return redirect('login')
-            
+        otp, pwd, conf = request.POST.get('otp'), request.POST.get('password'), request.POST.get('confirm_password')
+        email = request.session.get('reset_email')
+        user = User.objects.filter(email=email).first() if email else None
+        if user and user.otp_code == otp and pwd == conf:
+            user.set_password(pwd)
+            user.otp_code = None
+            user.save()
+            return redirect('login')
     return render(request, 'reset_password.html')
 
 @login_required
 def approve_shops_view(request):
-    """
-    Super Admin view to list and approve pending shop registrations.
-    """
-    if not request.user.is_superuser:
-        messages.error(request, 'Unauthorized access.')
-        return redirect('dashboard')
-    
-    pending_shops = ShopProfile.objects.filter(is_approved=False).select_related('user')
-    
+    if not request.user.is_superuser: return redirect('dashboard')
+    pending_shops = ShopProfile.objects.filter(is_approved=False)
     if request.method == 'POST':
-        shop_id = request.POST.get('shop_id')
-        action = request.POST.get('action') # 'approve' or 'reject'
-        
-        shop = get_object_or_404(ShopProfile, id=shop_id)
-        if action == 'approve':
+        shop = get_object_or_404(ShopProfile, id=request.POST.get('shop_id'))
+        if request.POST.get('action') == 'approve':
             shop.is_approved = True
             shop.save()
-            messages.success(request, f"Shop '{shop.shop_name}' approved!")
-        elif action == 'reject':
-            messages.info(request, f"Review for '{shop.shop_name}' completed.")
-
+            messages.success(request, 'Approved!')
         return redirect('approve_shops')
-
     return render(request, 'approve_shops.html', {'pending_shops': pending_shops})
+
+@login_required
+def pending_approval_view(request):
+    shop = ShopProfile.objects.filter(user=request.user).first()
+    if shop and shop.is_approved: return redirect('dashboard')
+    return render(request, 'pending_approval.html')

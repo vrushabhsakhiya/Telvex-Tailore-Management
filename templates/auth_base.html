@@ -5,152 +5,261 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Login{% endblock %} - Taivex Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    <title>{% block title %}Secure Access{% endblock %} - Telvex</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --dark: #0f172a;
+            --slate-800: #1e293b;
+            --slate-500: #64748b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
         body {
-            background-color: #f3f4f6;
+            background-color: #f8fafc;
             min-height: 100vh;
             display: flex;
+            overflow-x: hidden;
+        }
+
+        .auth-wrapper {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        /* Left Side: Brand & Vision */
+        .auth-info-side {
+            flex: 1.2;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-info-side::before {
+            content: '';
+            position: absolute;
+            top: -10%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            opacity: 0.15;
+            filter: blur(60px);
+        }
+
+        .brand-logo-large {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 64px;
+        }
+
+        .logo-icon {
+            width: 56px;
+            height: 56px;
+            background: white;
+            border-radius: 14px;
+            display: flex;
             align-items: center;
             justify-content: center;
-            padding: 2rem;
+            color: var(--primary);
+            font-size: 28px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
 
-        .auth-container {
-            width: 100%;
-            max-width: 420px;
-            background: white;
-            padding: 2.5rem;
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        .brand-name-large {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -1px;
         }
 
-        .auth-header {
-            text-align: center;
-            margin-bottom: 2rem;
+        .vision-mission-list {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            max-width: 500px;
         }
 
-        .auth-logo {
-            color: var(--primary-color, #4338CA);
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
+        .vm-item {
+            display: flex;
+            gap: 24px;
         }
 
-        .auth-title {
-            font-size: 1.5rem;
+        .vm-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-light, #818cf8);
+            font-size: 20px;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .vm-content h3 {
+            font-size: 20px;
             font-weight: 700;
-            color: #111827;
+            margin-bottom: 8px;
+            color: #f1f5f9;
         }
 
-        .auth-subtitle {
-            color: #6B7280;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
+        .vm-content p {
+            font-size: 15px;
+            color: #94a3b8;
+            line-height: 1.6;
         }
 
-        .form-group {
-            margin-bottom: 1.25rem;
+        /* Right Side: Form */
+        .auth-form-side {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+            background: white;
+            z-index: 10;
+            overflow-y: auto; /* Enable scroll if form is long */
+            max-height: 100vh;
         }
 
-        .form-label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #374151;
-            margin-bottom: 0.5rem;
-        }
-
-        .form-input {
+        .auth-card {
             width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid #D1D5DB;
-            border-radius: 0.5rem;
-            font-size: 0.875rem;
-            transition: all 0.15s ease;
+            max-width: 440px;
+            animation: slideInRight 0.6s ease-out;
         }
 
-        .form-input:focus {
-            outline: none;
-            border-color: var(--primary-color, #4338CA);
-            box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.1);
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
         }
+
+        /* Re-implementing premium form styles */
+        .form-header { margin-bottom: 32px; }
+        .auth-title { font-size: 28px; font-weight: 700; color: var(--dark); letter-spacing: -0.5px; }
+        .auth-subtitle { font-size: 15px; color: var(--slate-500); margin-top: 8px; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px; }
+        .form-input { 
+            width: 100%; height: 50px; padding: 0 16px; background: #f8fafc; 
+            border: 2px solid #e2e8f0; border-radius: 12px; font-size: 15px; 
+            transition: all 0.2s ease; outline: none;
+        }
+        .form-input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); }
 
         .btn-primary {
-            width: 100%;
-            padding: 0.75rem;
-            font-weight: 600;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            width: 100%; height: 52px; background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.4); filter: brightness(1.1); }
+
+        .auth-footer { 
+            margin-top: 32px; text-align: center; font-size: 14px; color: var(--slate-500); 
+            border-top: 1px solid #f1f5f9; padding-top: 24px;
+        }
+        .auth-footer a { color: var(--primary); font-weight: 600; text-decoration: none; }
+
+        .alert {
+            padding: 14px 18px; border-radius: 12px; margin-bottom: 24px; font-size: 14px; font-weight: 500;
+            display: flex; align-items: center; gap: 12px; border-left: 4px solid #ddd;
+        }
+        .alert-success { background: #f0fdf4; color: #15803d; border-left-color: #22c55e; }
+        .alert-error, .alert-danger { background: #fef2f2; color: #b91c1c; border-left-color: #ef4444; }
+
+        /* Grid Utilities for Form */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
 
-        .auth-footer {
-            margin-top: 1.5rem;
-            text-align: center;
-            font-size: 0.875rem;
-            color: #6B7280;
+        @media (max-width: 1300px) {
+            .form-grid { grid-template-columns: 1fr; gap: 0; }
         }
 
-        .auth-footer a {
-            color: var(--primary-color, #4338CA);
-            font-weight: 600;
-            text-decoration: none;
+        /* Mobile */
+        @media (max-width: 1024px) {
+            .auth-info-side { display: none; }
+            .auth-form-side { padding: 40px 24px; }
         }
-
-        .auth-footer a:hover {
-            text-decoration: underline;
-        }
-
-        /* Mobile Optimization */
-        @media (max-width: 480px) {
-            body {
-                padding: 1rem;
-            }
-
-            .auth-container {
-                padding: 1.5rem;
-            }
-        }
-
-        /* Alert Styles */
-        .alert-success { background-color: #DEF7EC; color: #03543F; border: 1px solid #BCF0DA; }
-        .alert-error, .alert-danger { background-color: #FDE8E8; color: #9B1C1C; border: 1px solid #FBD5D5; }
-        .alert-warning { background-color: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
-        .alert-info { background-color: #E1EFFE; color: #1E429F; border: 1px solid #C3DDFD; }
     </style>
 </head>
 
 <body>
-    <div class="auth-container">
-        <div class="auth-header">
-            <div class="auth-logo">
-                <i class="fa-solid fa-scissors"></i>
+    <div class="auth-wrapper">
+        <!-- Left Side: Vision & Mission -->
+        <div class="auth-info-side">
+            <div class="brand-logo-large">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-scissors"></i>
+                </div>
+                <h1 class="brand-name-large">Telvex</h1>
             </div>
-            <h1 class="auth-title">Taivex Pro</h1>
-            <p class="auth-subtitle">Tailoring Management System</p>
+
+            <div class="vision-mission-list">
+                <div class="vm-item">
+                    <div class="vm-icon"><i class="fa-solid fa-briefcase"></i></div>
+                    <div class="vm-content">
+                        <h3>Our Work</h3>
+                        <p>We empower tailor shop owners with cutting-edge digital intelligence to manage orders, measurements, and customer relationships with absolute precision.</p>
+                    </div>
+                </div>
+                
+                <div class="vm-item">
+                    <div class="vm-icon"><i class="fa-solid fa-eye"></i></div>
+                    <div class="vm-content">
+                        <h3>Our Vision</h3>
+                        <p>To redefine the tailoring industry by making high-end management technology accessible to every creative workshop in the world.</p>
+                    </div>
+                </div>
+
+                <div class="vm-item">
+                    <div class="vm-icon"><i class="fa-solid fa-bullseye"></i></div>
+                    <div class="vm-content">
+                        <h3>Our Mission</h3>
+                        <p>Creating seamless connections between tailors and customers through data-driven fits and streamlined operation workflows.</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Flash Messages -->
-        {% if messages %}
-        <div class="flash-messages" style="margin-bottom: 1.5rem;">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}"
-                style="padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.5rem; font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem;">
-                {% if message.tags == 'success' %}<i class="fa-solid fa-circle-check"></i>{% endif %}
-                {% if message.tags == 'error' or message.tags == 'danger' %}<i
-                    class="fa-solid fa-circle-exclamation"></i>{% endif %}
-                <span>{{ message }}</span>
+        <!-- Right Side: Form Container -->
+        <div class="auth-form-side">
+            <div class="auth-card">
+                {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
             </div>
-            {% endfor %}
         </div>
-        {% endif %}
-
-        {% block content %}{% endblock %}
-
     </div>
 </body>
 

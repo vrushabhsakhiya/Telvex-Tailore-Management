@@ -20,6 +20,7 @@
                     <th>Category</th>
                     <th>Measurements</th>
                     <th>Remarks</th>
+                    <th style="width: 100px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -42,6 +43,12 @@
                         </div>
                     </td>
                     <td>{{ m.remarks|default:'-' }}</td>
+                    <td>
+                        <a href="{% url 'add_measurement' customer.id %}?reuse_id={{ m.id }}" 
+                           class="btn btn-sm btn-primary" style="padding: 4px 10px; font-size: 0.8rem; border-radius: 6px;">
+                           <i class="fa-solid fa-redo"></i> Reuse
+                        </a>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>

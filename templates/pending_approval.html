@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div style="display: flex; justify-content: center; align-items: center; min-height: 80vh; padding: 2rem;">
+    <div class="card" style="max-width: 500px; width: 100%; text-align: center; padding: 3rem; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); border: 1px solid var(--border-color); background: var(--card-bg);">
+        <div style="width: 80px; height: 80px; background: rgba(var(--primary-rgb), 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; color: var(--primary-color);">
+            <i class="fa-solid fa-clock-rotate-left" style="font-size: 2.5rem;"></i>
+        </div>
+        
+        <h2 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">Account Pending Approval</h2>
+        
+        <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 2rem; font-size: 1.1rem;">
+            Welcome to <strong>Taivex</strong>! Your shop registration has been received and is currently waiting for admin approval. 
+        </p>
+
+        <div style="background: rgba(var(--primary-rgb), 0.05); padding: 1.5rem; border-radius: 12px; border: 1px dashed var(--primary-color); margin-bottom: 2rem;">
+            <p style="margin: 0; color: var(--text-primary); font-weight: 600;">
+                Now your request is pending. <br> Please contact:
+            </p>
+            <a href="mailto:growverto.info@gmail.com" style="display: block; margin-top: 0.5rem; color: var(--primary-color); font-weight: 700; font-size: 1.2rem; text-decoration: none;">
+                growverto.info@gmail.com
+            </a>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <a href="{% url 'logout' %}" class="btn btn-outline" style="padding: 0.75rem 1.5rem; border-radius: 10px;">
+                <i class="fa-solid fa-arrow-left"></i> Logout
+            </a>
+            <button onclick="window.location.reload()" class="btn btn-primary" style="padding: 0.75rem 1.5rem; border-radius: 10px;">
+                <i class="fa-solid fa-sync"></i> Check Status
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Ensure sidebar is hidden in pending view or handles it gracefully */
+    .sidebar { display: none !important; }
+    .main-content { margin-left: 0 !important; width: 100% !important; }
+    .top-header { display: none !important; }
+</style>
+{% endblock %}

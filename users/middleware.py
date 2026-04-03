@@ -70,3 +70,47 @@ class SecurityBlockingMiddleware:
              return HttpResponseForbidden("Access Denied: Suspected exploit payload.")
 
         return self.get_response(request)
+
+class ShopApprovalMiddleware:
+    """
+    Middleware to ensure that shop owners must be approved by an admin
+    before they can access the application features.
+    """
+    EXEMPT_URLS = [
+        '/logout/',
+        '/pending-approval/',
+        '/login/',
+        '/register/',
+        '/staff-login/',
+        '/verify-otp/',
+        '/forgot-password/',
+        '/reset-password/',
+        '/admin-login/',
+    ]
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            # 1. Superusers and Staff (System Admin) are always exempt
+            if request.user.is_superuser:
+                return self.get_response(request)
+
+            # 2. Check if current path is exempt (to avoid redirect loops)
+            path = request.path
+            if any(path.startswith(url) for url in self.EXEMPT_URLS):
+                return self.get_response(request)
+
+            # 3. Check Shop Profile Approval status
+            shop = getattr(request.user, 'shop_profile', None)
+            if shop:
+                if not shop.is_approved:
+                    return redirect('pending_approval')
+            else:
+                # If they are logged in but have no shop profile (unlikely but safe)
+                # and are not superuser, they shouldn't be here.
+                # However, for now, let them pass or redirect to register.
+                pass
+
+        return self.get_response(request)

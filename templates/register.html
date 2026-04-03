@@ -3,8 +3,10 @@
 {% block title %}Sign Up{% endblock %}
 
 {% block content %}
-<h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; text-align: center;">Register Your Shop</h2>
-<p style="text-align: center; color: #6B7280; font-size: 0.875rem; margin-bottom: 1.5rem;">Join the platform as a Shop Owner</p>
+<div class="form-header">
+    <h1 class="auth-title">Create Account</h1>
+    <p class="auth-subtitle">Join the elite network of professional tailors.</p>
+</div>
 
 <form action="{% url 'register' %}" method="POST">
     {% csrf_token %}
@@ -15,26 +17,30 @@
         <input type="text" id="honeypot_website" name="website" autocomplete="off">
     </div>
 
-    <div class="form-group">
-        <label for="owner_name" class="form-label">Owner Full Name</label>
-        <input type="text" id="owner_name" name="owner_name" class="form-input" placeholder="e.g. John Doe" required>
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="owner_name" class="form-label">Owner Full Name</label>
+            <input type="text" id="owner_name" name="owner_name" class="form-input" placeholder="e.g. John Doe" required>
+        </div>
+
+        <div class="form-group">
+            <label for="shop_name" class="form-label">Shop Name</label>
+            <input type="text" id="shop_name" name="shop_name" class="form-input" placeholder="e.g. Royal Tailors" required>
+        </div>
     </div>
 
-    <div class="form-group">
-        <label for="shop_name" class="form-label">Shop Name</label>
-        <input type="text" id="shop_name" name="shop_name" class="form-input" placeholder="e.g. Royal Tailors" required>
-    </div>
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="mobile" class="form-label">Mobile Number</label>
+            <input type="tel" id="mobile" name="mobile" class="form-input" placeholder="e.g. +91 9876543210" required>
+        </div>
 
-    <div class="form-group">
-        <label for="mobile" class="form-label">Mobile Number</label>
-        <input type="tel" id="mobile" name="mobile" class="form-input" placeholder="e.g. +91 9876543210" required>
+        <div class="form-group">
+            <label for="email" class="form-label">Email Address</label>
+            <input type="email" id="email" name="email" class="form-input" placeholder="shop@example.com" required>
+        </div>
     </div>
-
-    <div class="form-group">
-        <label for="email" class="form-label">Email Address</label>
-        <input type="email" id="email" name="email" class="form-input" placeholder="shop@example.com" required>
-        <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;">This will be your primary login id.</p>
-    </div>
+    <p style="font-size: 0.75rem; color: #6B7280; margin-top: -1rem; margin-bottom: 1rem;">This will be your primary login id.</p>
 
     <div class="form-group">
         <label for="address" class="form-label">Shop Address (Optional)</label>

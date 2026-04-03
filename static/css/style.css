@@ -24,14 +24,19 @@
     --transition-speed: 0.3s;
 }
 
+::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
 /* Dark Mode Variables */
 body.dark-mode {
     --bg-color: #0F172A;
     --card-bg: #1E293B;
-    --text-primary: #F3F4F6;
-    --text-secondary: #9CA3AF;
-    --border-color: #374151;
-    --sidebar-bg: #1E293B;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --border-color: #334155;
+    --sidebar-bg: #111827;
 }
 
 /* Global Reset */
@@ -254,11 +259,10 @@ body.dark-mode .nav-item.active {
 }
 
 .search-bar input {
-    background: none;
-    border: none;
     outline: none;
-    width: 100%;
-    color: var(--text-primary);
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background-color: var(--card-bg);
 }
 
 .header-actions {
@@ -426,42 +430,13 @@ body.dark-mode th {
 /* Response Utilities */
 @media (max-width: 768px) {
     .sidebar {
+        z-index: 1000;
         transform: translateX(-100%);
         box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
     }
 
     .sidebar.active {
         transform: translateX(0);
-    }
-
-    .main-content {
-        margin-left: 0;
-        width: 100%;
-    }
-
-    /* Fixed Mobile Menu Toggle (Right Side) */
-    /* Mobile Menu Toggle (Static Flow) */
-    .mobile-menu-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: none;
-        border: none;
-        color: var(--text-primary);
-        font-size: 1.5rem;
-        cursor: pointer;
-        margin-right: 0.75rem;
-        /* Space between toggle and logo */
-    }
-
-    /* Adjust Sidebar Z-Index to cover content but be under toggle if needed, 
-       but typically sidebar should cover everything. 
-       Let's keep toggle above sidebar so it can be used to close it too? 
-       Or standard pattern: Click outside to close. 
-       Let's keep toggle high to be accessible. */
-
-    .sidebar {
-        z-index: 1000;
     }
 
     .top-header {
@@ -572,29 +547,13 @@ body.dark-mode th {
     display: none !important;
 }
 
-/* Logout Button */
-.btn-logout {
-    background-color: var(--danger-color);
-    color: white;
-    width: 100%;
-    padding: 1rem;
-    font-size: 1rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.5rem;
-    border: none;
-    transition: filter 0.2s;
-}
-
-.btn-logout:hover {
-    filter: brightness(110%);
-}
+/* PREMIUM SETTINGS UI SECTIONS (Consolidated) */
 
 /* ================= PREMIUM SETTINGS UI ================= */
 
 /* Card Enhancements */
 .settings-card {
+    background: var(--card-bg);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     border: 1px solid transparent;
 }
@@ -621,6 +580,7 @@ select,
     border-radius: 8px;
     border: 1px solid var(--border-color);
     background-color: var(--bg-color);
+    color: var(--text-primary);
     font-size: 0.95rem;
     transition: all 0.2s ease;
     width: 100%;
@@ -687,13 +647,22 @@ body.dark-mode .btn-lang:hover {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Logout Button Polish */
 .btn-logout {
     border-radius: 10px;
     font-weight: 600;
     letter-spacing: 0.02em;
     box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background-color: var(--danger-color);
+    color: white;
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    border: none;
 }
 
 .btn-logout:hover {
@@ -734,11 +703,9 @@ body.dark-mode .btn-lang:hover {
 .data-form-group input,
 .data-form-group select,
 .data-type-select {
-    background-color: #F9FAFB;
-    /* Force light gray default */
-    border: 1px solid #E5E7EB;
-    color: #1F2937;
-    /* Force dark text for light bg */
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
 }
 
 /* Dark Mode Override for Data Management Inputs */

@@ -1,4 +1,5 @@
 from django.conf import settings
+from .models import ShopProfile
 
 def shop_context(request):
     context = {

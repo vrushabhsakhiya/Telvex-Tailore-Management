@@ -17,5 +17,5 @@ urlpatterns = [
     path('admin/delete-user/<int:user_id>/', views.admin_delete_user, name='admin_delete_user'),
     path('admin/approve-shops/', views.approve_shops_view, name='approve_shops'),
     path('settings/staff/delete/<str:staff_name>/', views.delete_staff, name='delete_staff'),
-    path('profile/update/', views.update_shop_profile, name='update_shop_profile'),
+    path('pending-approval/', views.pending_approval_view, name='pending_approval'),
 ]

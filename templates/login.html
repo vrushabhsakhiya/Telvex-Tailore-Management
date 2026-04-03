@@ -3,8 +3,10 @@
 {% block title %}Login{% endblock %}
 
 {% block content %}
-<h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; text-align: center;">Shop Owner Login</h2>
-<p style="text-align: center; color: #6B7280; font-size: 0.875rem; margin-bottom: 1.5rem;">Manage your tailor shop from anywhere</p>
+<div class="form-header">
+    <h1 class="auth-title">Welcome Back</h1>
+    <p class="auth-subtitle">Manage your tailoring shop from anywhere.</p>
+</div>
 
 <form action="{% url 'login' %}" method="POST">
     {% csrf_token %}
@@ -17,9 +19,8 @@
     <div class="form-group">
         <label for="password" class="form-label">Password</label>
         <input type="password" id="password" name="password" class="form-input" placeholder="••••••••" required>
-        <div style="text-align: right; margin-top: 0.25rem;">
-            <a href="{% url 'forgot_password' %}" style="font-size: 0.75rem; color: var(--primary-color); text-decoration: none;">Forgot
-                password?</a>
+        <div style="text-align: right; margin-top: 0.5rem;">
+            <a href="{% url 'forgot_password' %}" style="font-size: 0.75rem; color: var(--primary); text-decoration: none;">Forgot password?</a>
         </div>
     </div>
 

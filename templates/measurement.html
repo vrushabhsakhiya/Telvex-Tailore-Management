@@ -211,13 +211,36 @@
                 [data-theme="dark"] .draft-item-card:hover { box-shadow: 0 4px 12px rgba(255,255,255,0.05); }
             </style>
 
-            {% else %}
-            <div class="card" style="padding: 3rem 1.5rem; text-align: center; background: var(--bg-color); border: 2px dashed var(--border-color); border-radius: 12px; display: flex; flex-direction: column; align-items: center;">
-                <div style="width: 64px; height: 64px; background: rgba(var(--text-secondary-rgb), 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
-                    <i class="fa-solid fa-file-invoice" style="font-size: 1.5rem; color: var(--text-secondary);"></i>
+            {% endif %}
+
+            <!-- RECENT HISTORY (REUSE) -->
+            {% if recent_measurements %}
+            <div class="card" style="margin-top: 1.5rem; padding: 1.5rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                <h4 style="margin: 0 0 1rem 0; font-weight: 700; font-size: 0.95rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">
+                    <i class="fa-solid fa-history" style="margin-right: 0.4rem;"></i> Recent History
+                </h4>
+                
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    {% for m in recent_measurements %}
+                    <div style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); font-size: 0.9rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                            <span class="badge badge-primary" style="font-size: 0.7rem;">{{ m.category.name }}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">{{ m.date|date:"d M" }}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">
+                                {{ m.remarks|default:"No remarks" }}
+                            </div>
+                            <a href="{% url 'add_measurement' customer.id %}?reuse_id={{ m.id }}" style="text-decoration: none; font-weight: 700; color: var(--primary-color); font-size: 0.8rem;">
+                                <i class="fa-solid fa-redo"></i> Reuse
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <a href="{% url 'customer_measurement_history' customer.id %}" style="display: block; text-align: center; margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary); text-decoration: none; font-weight: 600;">
+                        View Full History <i class="fa-solid fa-chevron-right" style="font-size: 0.7em;"></i>
+                    </a>
                 </div>
-                <h4 style="margin: 0 0 0.5rem 0; color: var(--text-primary); font-weight: 600;">Draft is Empty</h4>
-                <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0; max-width: 250px;">Select a measurement category from the left to start building a bill.</p>
             </div>
             {% endif %}
         </div>
@@ -351,7 +374,7 @@
             }
         } catch (err) {
             console.error("Error in selectCategory:", err);
-            alert("Sorry, something went wrong while opening the measurement form. Please try again.");
+            showToast("Sorry, something went wrong while opening the measurement form. Please try again.", "error");
         }
     }
 
@@ -461,9 +484,7 @@
         const inputs = document.querySelectorAll('.measurement-input');
         let isValid = true;
 
-        inputs.forEach(input => {
-            if (!input.value.trim()) {
-                input.style.borderColor = 'red';
+                input.style.borderColor = '#ef4444';
                 isValid = false;
             } else {
                 input.style.borderColor = ''; 
@@ -471,7 +492,7 @@
         });
 
         if (!isValid && inputs.length > 0) {
-            alert('Please fill all compulsory measurement fields (marked with *).');
+            showToast('Please fill all compulsory measurement fields (marked with *).', 'error');
             return false;
         }
         return true;

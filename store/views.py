@@ -241,7 +241,7 @@ def measurements_list(request):
 @login_required
 def customer_measurement_history(request, id):
     customer = get_object_or_404(Customer, id=id, user=request.user)
-    measurements = Measurement.objects.filter(user=request.user, customer=customer).select_related('category').order_by('-id')
+    measurements = Measurement.objects.filter(user=request.user, customer=customer).select_related('category').order_by('-date')
     
     return render(request, 'measurement_history.html', {
         'customer': customer,
@@ -375,20 +375,32 @@ def view_invoice(request, id):
     order = get_object_or_404(Order, id=id, user=request.user)
     shop = ShopProfile.objects.filter(user=request.user).first()
     
+    # Fallback to prevent VariableDoesNotExist if shop is missing
+    if not shop:
+        shop = type('DummyShop', (), {
+            'shop_name': 'My Shop',
+            'mobile': '',
+            'address': '',
+            'gst_no': '',
+            'upi_id': '',
+            'terms': '',
+            'logo': None,
+            'staff_roles': {}
+        })
+    
     # Generate UPI QR Link if UPI ID exists
     upi_qr_url = ""
     bill_created_role = ""
-    if shop:
-        if shop.upi_id:
-            # Standard UPI format: upi://pay?pa=ID&pn=NAME&am=AMOUNT&cu=INR
-            import urllib.parse
-            # Ensure amount has 2 decimal places
-            formatted_balance = f"{order.balance:.2f}"
-            upi_qr_url = f"upi://pay?pa={shop.upi_id}&pn={urllib.parse.quote(shop.shop_name)}&am={formatted_balance}&cu=INR"
-        
-        # Get role of the person who created this bill
-        if order.bill_created_by:
-            bill_created_role = shop.staff_roles.get(order.bill_created_by, "")
+    if hasattr(shop, 'upi_id') and shop.upi_id:
+        # Standard UPI format: upi://pay?pa=ID&pn=NAME&am=AMOUNT&cu=INR
+        import urllib.parse
+        # Ensure amount has 2 decimal places
+        formatted_balance = f"{order.balance:.2f}"
+        upi_qr_url = f"upi://pay?pa={shop.upi_id}&pn={urllib.parse.quote(getattr(shop, 'shop_name', 'Shop'))}&am={formatted_balance}&cu=INR"
+    
+    # Get role of the person who created this bill
+    if order.bill_created_by and hasattr(shop, 'staff_roles'):
+        bill_created_role = shop.staff_roles.get(order.bill_created_by, "")
 
     return render(request, 'invoice.html', {
         'order': order, 
@@ -407,6 +419,10 @@ def generate_invoice_pdf(order, shop):
     Also saves a CSV record.
     """
     try:
+        # Fallback for shop
+        if not shop:
+            shop = type('DummyShop', (), {'shop_name': 'My Shop', 'logo': None, 'address': '', 'mobile': '', 'upi_id': '', 'terms': ''})
+
         # Render HTML
         context = {'order': order, 'shop': shop, 'is_public': False, 'download_mode': True}
         html_string = render_to_string('invoice.html', context)
@@ -504,6 +520,7 @@ def add_category(request):
             user=request.user,
             name=name,
             gender=gender,
+            icon=request.POST.get('icon', 'fa-scissors'),
             fields_json=fields_list # Django JSONField takes python object
         )
         messages.success(request, 'Category added successfully.')
@@ -687,8 +704,9 @@ def add_measurement_view(request, customer_id):
         'edit_index': edit_index,
         'edit_item': edit_item,
         'shop': shop,
-        'draft_cart': draft_cart, # Pass draft items to template
-        'draft_total': sum(float(i.get('price', 0)) for i in draft_cart)
+        'draft_cart': draft_cart, 
+        'draft_total': sum(float(i.get('price', 0)) for i in draft_cart),
+        'recent_measurements': Measurement.objects.filter(user=request.user, customer=customer).select_related('category').order_by('-date')[:5]
     })
 
 @login_required

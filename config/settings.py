@@ -66,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'users.middleware.JWTSessionMiddleware',
+    'users.middleware.ShopApprovalMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
