@@ -40,4 +40,33 @@ class JWTSessionMiddleware:
                 return response
 
         return self.get_response(request)
-    
+from django.http import HttpResponseForbidden, HttpResponsePermanentRedirect
+
+class SecurityBlockingMiddleware:
+    """
+    Blocks malicious requests from security scanners and bots.
+    Targeting patterns seen in OWASP ZAP and common exploit scripts.
+    """
+    BLOCKED_EXTENSIONS = ('.php', '.axd', '.config', '.sql', '.ini', '.xml', '.env', '.htaccess', '.DS_Store')
+    BLOCKED_PATHS = ('/latest/meta-data/', '/computeMetadata/v1/', '/.git/', '/.ssh/', '/WEB-INF/', '/actuator/')
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        path = request.path.lower()
+        query = request.META.get('QUERY_STRING', '').lower()
+
+        # 1. Block forbidden extensions
+        if any(path.endswith(ext) for ext in self.BLOCKED_EXTENSIONS):
+            return HttpResponseForbidden("Access Denied: Malicious probe detected.")
+
+        # 2. Block sensitive paths
+        if any(p in path for p in self.BLOCKED_PATHS):
+            return HttpResponseForbidden("Access Denied: Sensitive endpoint restricted.")
+
+        # 3. Block suspicious query patterns (exploit strings from CSV)
+        if '?-s' in query or '?-d' in query or 'class.module' in query or 'allow_url_include' in query:
+             return HttpResponseForbidden("Access Denied: Suspected exploit payload.")
+
+        return self.get_response(request)

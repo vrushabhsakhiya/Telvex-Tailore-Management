@@ -35,7 +35,7 @@ def dashboard(request):
     
     # Advanced: Monthly Revenue Trend (Last 6 Months)
     from django.db.models.functions import TruncMonth
-    revenue_trend = Order.objects.filter(user=user, created_at__gte=today - timedelta(days=180)) \
+    revenue_trend = Order.objects.filter(user=user, created_at__date__gte=today - timedelta(days=180)) \
         .annotate(month=TruncMonth('created_at')) \
         .values('month') \
         .annotate(total=Sum('total_amt')) \

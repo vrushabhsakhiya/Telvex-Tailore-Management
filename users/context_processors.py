@@ -1,16 +1,20 @@
-from .models import ShopProfile
+from django.conf import settings
 
 def shop_context(request):
+    context = {
+        'shop': None,
+        'staff_name': None,
+        'staff_role': None,
+        'RECAPTCHA_PUBLIC_KEY': settings.RECAPTCHA_PUBLIC_KEY
+    }
+    
     if request.user.is_authenticated:
         try:
             shop = ShopProfile.objects.get(user=request.user)
-            staff_name = getattr(request, 'staff_name', None)
-            staff_role = getattr(request, 'staff_role', None)
-            return {
-                'shop': shop,
-                'staff_name': staff_name,
-                'staff_role': staff_role
-            }
+            context['shop'] = shop
+            context['staff_name'] = getattr(request, 'staff_name', None)
+            context['staff_role'] = getattr(request, 'staff_role', None)
         except ShopProfile.DoesNotExist:
-            return {'shop': None, 'staff_name': None, 'staff_role': None}
-    return {'shop': None, 'staff_name': None, 'staff_role': None}
+            pass
+            
+    return context

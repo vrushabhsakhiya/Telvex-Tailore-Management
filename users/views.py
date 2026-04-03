@@ -18,8 +18,21 @@ from django.utils import timezone
 import os
 from .models import User, ShopProfile
 
+from django.core.cache import cache
+
+LOGIN_TEMPLATE = 'login.html'
+
 def register_view(request):
     if request.method == 'POST':
+        # 0. IP Rate Limiting
+        ip = request.META.get('REMOTE_ADDR')
+        cache_key = f'ratelimit_reg_{ip}'
+        attempts = cache.get(cache_key, 0)
+        if attempts >= 3: # 3 register attempts per hour
+             messages.error(request, 'Too many registration attempts. Please try again in an hour.')
+             return redirect('register')
+        cache.set(cache_key, attempts + 1, 3600)
+
         # 1. Honeypot check (Bot Protection)
         if request.POST.get('website'):
             # Silently redirect bots to success to waste their time 
@@ -33,6 +46,23 @@ def register_view(request):
         if reg_start > 0 and time_diff < 5:
              # Too fast, probably a bot
              messages.error(request, 'Registration failed. Please try again.')
+             return redirect('register')
+
+        # 3. reCAPTCHA Validation
+        recaptcha_response = request.POST.get('g-recaptcha-response')
+        if not recaptcha_response:
+             messages.error(request, 'Please complete the reCAPTCHA.')
+             return redirect('register')
+             
+        import requests
+        data = {
+            'secret': settings.RECAPTCHA_PRIVATE_KEY,
+            'response': recaptcha_response
+        }
+        r = requests.post('https://www.google.com/recaptcha/api/siteverify', data=data)
+        result = r.json()
+        if not result.get('success'):
+             messages.error(request, 'reCAPTCHA verification failed. Please try again.')
              return redirect('register')
 
         owner_name = request.POST.get('owner_name')
@@ -87,11 +117,35 @@ def login_view(request):
         email = request.POST.get('username') # Form uses 'username' name for email input
         password = request.POST.get('password')
         
-        # 1. Basic Rate Limiting / Lock Check
+        # 0. IP Rate Limiting (Brute Force Protection)
+        ip = request.META.get('REMOTE_ADDR')
+        cache_key = f'ratelimit_login_{ip}'
+        attempts = cache.get(cache_key, 0)
+        if attempts >= 10: # Max 10 attempts per IP per 5 mins
+             messages.error(request, 'Too many failed login attempts from this network. Please wait.')
+             return render(request, LOGIN_TEMPLATE)
+        cache.set(cache_key, attempts + 1, 300)
+
+        # 1. reCAPTCHA Validation
+        recaptcha_response = request.POST.get('g-recaptcha-response')
+        if not recaptcha_response:
+             messages.error(request, 'Please complete the reCAPTCHA.')
+             return render(request, LOGIN_TEMPLATE)
+             
+        import requests
+        r = requests.post('https://www.google.com/recaptcha/api/siteverify', data={
+            'secret': settings.RECAPTCHA_PRIVATE_KEY,
+            'response': recaptcha_response
+        })
+        if not r.json().get('success'):
+             messages.error(request, 'reCAPTCHA verification failed. Please try again.')
+             return render(request, LOGIN_TEMPLATE)
+
+        # 2. Basic Rate Limiting / Lock Check
         user_candidate = User.objects.filter(username=email).first() or User.objects.filter(email=email).first()
         if user_candidate and user_candidate.locked_until and user_candidate.locked_until > timezone.now():
             messages.error(request, 'Account locked due to multiple failed attempts. Please try again later.')
-            return render(request, 'login.html')
+            return render(request, LOGIN_TEMPLATE)
 
         user = authenticate(request, username=email, password=password)
         
@@ -114,20 +168,35 @@ def login_view(request):
             }
             temp_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
 
-            # Send OTP via Email
+            # Send OTP via Email (Real Email Sending)
+            email_html = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                <h2 style="color: #6366f1; text-align: center;">Teivex Security</h2>
+                <p>Hello,</p>
+                <p>You requested a login OTP for your Teivex account. Please use the code below to complete your login:</p>
+                <div style="background: #f1f5f9; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #1e293b; border-radius: 8px; margin: 20px 0;">
+                    {otp}
+                </div>
+                <p style="color: #64748b; font-size: 14px;">This code will expire in 10 minutes. If you did not request this, please ignore this email or contact support.</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; {timezone.now().year} Telvex. All rights reserved.</p>
+            </div>
+            """
+            
             try:
                 send_mail(
                     subject='Login OTP - Telvex',
                     message=f'Your login OTP is: {otp}. It expires in 10 minutes.',
-                    from_email=None,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[user.email],
+                    html_message=email_html,
                     fail_silently=False,
                 )
-                messages.info(request, f'OTP sent to your email.')
-            except Exception:
+                messages.info(request, f'OTP sent to your email: {user.email}')
+            except Exception as e:
                 # Fallback for dev if email not configured
                 if settings.DEBUG:
-                    messages.warning(request, f'Email delivery failed. Dev OTP: {otp}')
+                    messages.warning(request, f'Email delivery failed. Dev OTP: {otp}. Error: {str(e)}')
                 else:
                     messages.error(request, 'Failed to send OTP. Please contact support.')
                     return redirect('login')
@@ -155,6 +224,15 @@ def verify_otp_view(request):
     if not token:
         return redirect('login')
     
+    # IP Rate Limiting for OTP Verification
+    ip = request.META.get('REMOTE_ADDR')
+    cache_key = f'ratelimit_otp_{ip}'
+    attempts = cache.get(cache_key, 0)
+    if attempts >= 10: # Max 10 attempts per 5 mins
+         messages.error(request, 'Too many OTP attempts. Please wait.')
+         return redirect('login')
+    cache.set(cache_key, attempts + 1, 300)
+
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
         user = User.objects.get(id=payload['user_id'])
@@ -556,18 +634,37 @@ def forgot_password_view(request):
             
             request.session['reset_email'] = user.email 
             
-            # Send Email
+            # Send Reset Email (Real Email Sending)
+            reset_html = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                <h2 style="color: #ef4444; text-align: center;">Telvex Password Reset</h2>
+                <p>Hello,</p>
+                <p>We received a request to reset your password. Use the secret OTP below to proceed:</p>
+                <div style="background: #fef2f2; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #991b1b; border-radius: 8px; margin: 20px 0; border: 1px dashed #ef4444;">
+                    {otp}
+                </div>
+                <p style="color: #64748b; font-size: 14px;">This code is valid for 15 minutes. <strong>Never share this OTP with anyone.</strong></p>
+                <p style="color: #64748b; font-size: 14px;">If you didn't request a password reset, you can safely ignore this email.</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; {timezone.now().year} Telvex. All rights reserved.</p>
+            </div>
+            """
+
             try:
                 send_mail(
                     subject='Password Reset OTP - Telvex',
                     message=f'Your secret OTP to reset your password is: {otp}. Valid for 15 minutes.',
-                    from_email=None, 
+                    from_email=settings.DEFAULT_FROM_EMAIL, 
                     recipient_list=[user.email],
+                    html_message=reset_html,
                     fail_silently=False,
                 )
                 messages.success(request, f'Password reset OTP sent to {user.email}.')
-            except Exception:
-                messages.error(request, "Failed to send reset email. Please try again.")
+            except Exception as e:
+                if settings.DEBUG:
+                    messages.warning(request, f"Failed to send reset email. Dev OTP: {otp}. Error: {str(e)}")
+                else:
+                    messages.error(request, "Failed to send reset email. Please try again.")
 
             return redirect('reset_password')
         else:

@@ -59,6 +59,11 @@
             placeholder="Repeat Password" required minlength="8">
     </div>
 
+    <div class="form-group" style="margin: 1.5rem 0;">
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+        <div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_PUBLIC_KEY }}"></div>
+    </div>
+
     <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">
         Register Shop & Create Account
     </button>

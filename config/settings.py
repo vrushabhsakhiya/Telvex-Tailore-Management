@@ -56,6 +56,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'users.middleware.SecurityBlockingMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -161,13 +162,23 @@ LOGIN_URL = 'login' # Fix for @login_required redirecting to /accounts/login/
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Google reCAPTCHA
-RECAPTCHA_PUBLIC_KEY = '6LetWEksAAAAAAkEcafeNC7NQY8ztZEegbsUPMfE'
-RECAPTCHA_PRIVATE_KEY = '6LetWEksAAAAAP-bZ4lkcz_OzABfTumxy5loEIOj'
+RECAPTCHA_PUBLIC_KEY = os.getenv('RECAPTCHA_PUBLIC_KEY', '6LetWEksAAAAAAkEcafeNC7NQY8ztZEegbsUPMfE')
+RECAPTCHA_PRIVATE_KEY = os.getenv('RECAPTCHA_PRIVATE_KEY', '6LetWEksAAAAAP-bZ4lkcz_OzABfTumxy5loEIOj')
 # Silence error for using Test Keys
 SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error']
 
-# Email Backend (Console for Development)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Custom Rate Limiting
+LOGIN_ATTEMPTS_LIMIT = 5
+LOGIN_LOCKOUT_TIME = 60 * 5 # 5 minutes
+
+# Email Configuration
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Teivex <[EMAIL_ADDRESS]>')
 
 # Vercel / Production Security Settings
 if not DEBUG:
@@ -180,3 +191,13 @@ if not DEBUG:
         'https://' + os.environ.get('VERCEL_URL', ''),
         'https://telvex-tailore-management.onrender.com'
     ]
+    
+    # HSTS Settings
+    SECURE_HSTS_SECONDS = 31536000 # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    
+    # Other Security Headers
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
