@@ -36,7 +36,20 @@ class Order(models.Model):
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.start_date and self.delivery_date and self.delivery_date < self.start_date:
+            raise ValidationError("Delivery date cannot be before the start date.")
+        if self.total_amt < 0:
+            raise ValidationError("Total amount cannot be negative.")
+        if self.advance < 0:
+            raise ValidationError("Advance payment cannot be negative.")
+
     def save(self, *args, **kwargs):
+        self.clean()
+        # Automatically calculate balance
+        self.balance = round(float(self.total_amt or 0) - float(self.advance or 0), 2)
+        
         if not self.bill_number and self.user:
             # Generate next bill number for this user
             last_bill = Order.objects.filter(user=self.user).aggregate(models.Max('bill_number'))['bill_number__max']

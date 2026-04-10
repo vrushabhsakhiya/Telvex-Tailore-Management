@@ -117,7 +117,7 @@ def register_view(request):
         # Fails gracefully if session DB table isn't fully migrated yet
         pass
         
-    return render(request, 'register.html')
+    return render(request, 'register.html', {'hide_marketing_sidebar': True})
 
 def login_view(request):
     if request.method == 'POST':
@@ -308,7 +308,7 @@ def staff_login_view(request):
             
         messages.error(request, 'Invalid Shop Email, Staff Name, or PIN.')
         
-    return render(request, 'staff_login.html')
+    return render(request, 'staff_login.html', {'hide_marketing_sidebar': True})
 
 def logout_view(request):
     logout(request)
@@ -539,7 +539,7 @@ def forgot_password_view(request):
         else:
             messages.error(request, 'Account not found.')
             
-    return render(request, 'forgot_password.html')
+    return render(request, 'forgot_password.html', {'hide_marketing_sidebar': True})
 
 def reset_password_view(request):
     if request.method == 'POST':
@@ -583,7 +583,11 @@ def reset_password_view(request):
         messages.success(request, 'Password reset successful! Please sign in.')
         return redirect('login')
         
-    return render(request, 'reset_password.html')
+    return render(request, 'reset_password.html', {'hide_marketing_sidebar': True})
+
+def heartbeat(request):
+    """Simple heartbeat view for uptime monitoring (prevent Render cold starts)."""
+    return HttpResponse("OK", status=200)
 
 @login_required
 def approve_shops_view(request):

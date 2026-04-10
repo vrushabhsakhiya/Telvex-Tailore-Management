@@ -208,7 +208,8 @@
 
 <body>
     <div class="auth-wrapper">
-        <!-- Left Side: Vision & Mission -->
+        <!-- Left Side: Vision & Mission (Conditional) -->
+        {% if not hide_marketing_sidebar %}
         <div class="auth-info-side">
             <div class="brand-logo-large">
                 <div class="logo-icon">
@@ -222,7 +223,7 @@
                     <div class="vm-icon"><i class="fa-solid fa-briefcase"></i></div>
                     <div class="vm-content">
                         <h3>Our Work</h3>
-                        <p>We empower tailor shop owners with cutting-edge digital intelligence to manage orders, measurements, and customer relationships with absolute precision.</p>
+                        <p>We empower tailor shop owners with digital intelligence to manage orders and measurements with absolute precision.</p>
                     </div>
                 </div>
                 
@@ -230,7 +231,7 @@
                     <div class="vm-icon"><i class="fa-solid fa-eye"></i></div>
                     <div class="vm-content">
                         <h3>Our Vision</h3>
-                        <p>To redefine the tailoring industry by making high-end management technology accessible to every creative workshop in the world.</p>
+                        <p>To redefine the tailoring industry by making management technology accessible to every workshop in the world.</p>
                     </div>
                 </div>
 
@@ -238,15 +239,25 @@
                     <div class="vm-icon"><i class="fa-solid fa-bullseye"></i></div>
                     <div class="vm-content">
                         <h3>Our Mission</h3>
-                        <p>Creating seamless connections between tailors and customers through data-driven fits and streamlined operation workflows.</p>
+                        <p>Creating seamless connections through data-driven fits and streamlined operation workflows.</p>
                     </div>
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Right Side: Form Container -->
-        <div class="auth-form-side">
-            <div class="auth-card">
+        <div class="auth-form-side" {% if hide_marketing_sidebar %}style="flex: 1; min-height: 100vh; background: #f8fafc;"{% endif %}>
+            <div class="auth-card" {% if hide_marketing_sidebar %}style="background: white; padding: 40px; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);"{% endif %}>
+                {% if hide_marketing_sidebar %}
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <div style="width: 48px; height: 48px; background: var(--primary); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; margin-bottom: 1rem;">
+                        <i class="fa-solid fa-scissors"></i>
+                    </div>
+                    <h2 style="font-weight: 800; color: var(--dark);">Telvex</h2>
+                </div>
+                {% endif %}
+
                 {% if messages %}
                 <div class="flash-messages">
                     {% for message in messages %}
@@ -261,6 +272,65 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Global Password Toggle Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const passwordInputs = document.querySelectorAll('input[type="password"]');
+            passwordInputs.forEach(input => {
+                // Ensure parent has position relative
+                const parent = input.parentElement;
+                if (!parent.style.position) parent.style.position = 'relative';
+
+                const toggleBtn = document.createElement('i');
+                toggleBtn.className = 'fa-solid fa-eye';
+                toggleBtn.style.cssText = `
+                    position: absolute;
+                    right: 16px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    cursor: pointer;
+                    color: #94a3b8;
+                    transition: color 0.2s;
+                    z-index: 5;
+                `;
+
+                if (input.id === 'pin') toggleBtn.style.top = '40px'; // Adjust for PIN label
+
+                toggleBtn.addEventListener('click', () => {
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        toggleBtn.classList.replace('fa-eye', 'fa-eye-slash');
+                    } else {
+                        input.type = 'password';
+                        toggleBtn.classList.replace('fa-eye-slash', 'fa-eye');
+                    }
+                });
+
+                parent.appendChild(toggleBtn);
+                input.style.paddingRight = '45px';
+            });
+
+            // Global Loading Indicator
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', (e) => {
+                    const btn = form.querySelector('button[type="submit"]');
+                    if (btn && !btn.disabled) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+                        
+                        // Safety timeout
+                        setTimeout(() => { 
+                            if (btn.disabled) {
+                                btn.disabled = false;
+                                btn.innerHTML = btn.getAttribute('data-original-text') || 'Submit';
+                            }
+                        }, 10000);
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 
 </html>

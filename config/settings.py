@@ -97,7 +97,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.getenv("DATABASE_URL", "postgresql://taivexuser:30rbGXfTtcwlJb52yWxE7RFYawfFMU1C@dpg-d75o25muk2gs73dcqvig-a.oregon-postgres.render.com/taivex"),
+        default=os.getenv("DATABASE_URL"),
         conn_max_age=600,
         ssl_require=not DEBUG # Only require SSL in production (DEBUG=False)
     )
@@ -163,8 +163,8 @@ LOGIN_URL = 'login' # Fix for @login_required redirecting to /accounts/login/
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Google reCAPTCHA
-RECAPTCHA_PUBLIC_KEY = os.getenv('RECAPTCHA_PUBLIC_KEY', '6LetWEksAAAAAAkEcafeNC7NQY8ztZEegbsUPMfE')
-RECAPTCHA_PRIVATE_KEY = os.getenv('RECAPTCHA_PRIVATE_KEY', '6LetWEksAAAAAP-bZ4lkcz_OzABfTumxy5loEIOj')
+RECAPTCHA_PUBLIC_KEY = os.getenv('RECAPTCHA_PUBLIC_KEY')
+RECAPTCHA_PRIVATE_KEY = os.getenv('RECAPTCHA_PRIVATE_KEY')
 # Silence error for using Test Keys
 SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error']
 
@@ -179,9 +179,9 @@ EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Teivex <[EMAIL_ADDRESS]>')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Teivex <support@telvex.com>')
 
-# Vercel / Production Security Settings
+# Production Security Settings (Enabled when DEBUG=False)
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True

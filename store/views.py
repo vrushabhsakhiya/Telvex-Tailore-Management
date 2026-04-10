@@ -41,17 +41,11 @@ def dashboard(request):
         .annotate(total=Sum('total_amt')) \
         .order_by('month')
 
-    # Advanced: Top Customers
-    top_customers_query = Order.objects.filter(user=user) \
-        .values('customer') \
-        .annotate(spend=Sum('total_amt')) \
+    # Advanced: Top Customers (Optimized: Removed N+1 Query)
+    top_customers = Customer.objects.filter(user=user) \
+        .annotate(spend=Sum('order__total_amt')) \
+        .filter(spend__gt=0) \
         .order_by('-spend')[:5]
-    
-    top_customers = []
-    for entry in top_customers_query:
-        cust = Customer.objects.filter(id=entry['customer']).first()
-        if cust:
-            top_customers.append((cust, entry['spend']))
 
     # Advanced: Upcoming Deliveries (Next 7 Days)
     upcoming_deliveries = Order.objects.filter(
