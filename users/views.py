@@ -251,7 +251,10 @@ def verify_otp_view(request):
         return redirect('login')
 
     if request.method == 'POST':
-        otp = request.POST.get('otp')
+        otp = request.POST.get('otp', '').strip()
+        if settings.DEBUG:
+            print(f"DEBUG: Verifying OTP for {user.email}. Received: '{otp}', Expected: '{user.otp_code}', Expired: {user.otp_expiry <= timezone.now()}")
+            
         if otp == user.otp_code and user.otp_expiry > timezone.now():
             login(request, user)
             user.otp_code = None
