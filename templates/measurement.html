@@ -484,6 +484,8 @@
         const inputs = document.querySelectorAll('.measurement-input');
         let isValid = true;
 
+        inputs.forEach(input => {
+            if (input.required && !input.value.trim()) {
                 input.style.borderColor = '#ef4444';
                 isValid = false;
             } else {
