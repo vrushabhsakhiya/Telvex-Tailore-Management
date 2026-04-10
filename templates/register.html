@@ -40,37 +40,39 @@
             <input type="email" id="email" name="email" class="form-input" placeholder="shop@example.com" required>
         </div>
     </div>
-    <p style="font-size: 0.75rem; color: #6B7280; margin-top: -1rem; margin-bottom: 1rem;">This will be your primary login id.</p>
 
-    <div class="form-group">
-        <label for="address" class="form-label">Shop Address (Optional)</label>
-        <textarea id="address" name="address" class="form-input" placeholder="Enter shop address" rows="2"></textarea>
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="address" class="form-label">Shop Address (Optional)</label>
+            <input type="text" id="address" name="address" class="form-input" placeholder="Enter shop address" rows="1">
+        </div>
+
+        <div class="form-group">
+            <label for="gst_no" class="form-label">GST Number (Optional)</label>
+            <input type="text" id="gst_no" name="gst_no" class="form-input" placeholder="e.g. 27AAAP...Z1">
+        </div>
     </div>
 
-    <div class="form-group">
-        <label for="gst_no" class="form-label">GST Number (Optional)</label>
-        <input type="text" id="gst_no" name="gst_no" class="form-input" placeholder="e.g. 27AAAP...Z1">
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" id="password" name="password" class="form-input" placeholder="Min. 8 characters" required
+                minlength="8">
+        </div>
+
+        <div class="form-group">
+            <label for="confirm_password" class="form-label">Confirm Password</label>
+            <input type="password" id="confirm_password" name="confirm_password" class="form-input"
+                placeholder="Repeat Password" required minlength="8">
+        </div>
     </div>
 
-    <div class="form-group">
-        <label for="password" class="form-label">Password</label>
-        <input type="password" id="password" name="password" class="form-input" placeholder="Min. 8 characters" required
-            minlength="8">
-        <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;">Must be at least 8 characters long.</p>
-    </div>
-
-    <div class="form-group">
-        <label for="confirm_password" class="form-label">Confirm Password</label>
-        <input type="password" id="confirm_password" name="confirm_password" class="form-input"
-            placeholder="Repeat Password" required minlength="8">
-    </div>
-
-    <div class="form-group" style="margin: 1.5rem 0;">
+    <div class="form-group" style="margin: 0.75rem 0;">
         <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-        <div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_PUBLIC_KEY }}"></div>
+        <div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_PUBLIC_KEY }}" data-size="compact"></div>
     </div>
 
-    <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">
+    <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">
         Register Shop & Create Account
     </button>
 </form>

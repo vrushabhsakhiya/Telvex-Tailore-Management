@@ -55,15 +55,22 @@ def register_view(request):
              return redirect('register')
              
         import requests
-        data = {
-            'secret': settings.RECAPTCHA_PRIVATE_KEY,
-            'response': recaptcha_response
-        }
-        r = requests.post('https://www.google.com/recaptcha/api/siteverify', data=data)
-        result = r.json()
-        if not result.get('success'):
-             messages.error(request, 'reCAPTCHA verification failed. Please try again.')
-             return redirect('register')
+        try:
+            r = requests.post('https://www.google.com/recaptcha/api/siteverify', data={
+                'secret': settings.RECAPTCHA_PRIVATE_KEY,
+                'response': recaptcha_response
+            }, timeout=5)
+            result = r.json()
+            if not result.get('success'):
+                 messages.error(request, 'reCAPTCHA verification failed. Please try again.')
+                 return redirect('register')
+        except Exception as e:
+            # Fallback for network issues or API down
+            if settings.DEBUG:
+                messages.warning(request, f'reCAPTCHA error: {e}. Skipping check for Dev.')
+            else:
+                messages.error(request, 'reCAPTCHA service unavailable. Please try later.')
+                return redirect('register')
 
         owner_name = request.POST.get('owner_name')
         shop_name = request.POST.get('shop_name')
@@ -133,13 +140,21 @@ def login_view(request):
              return render(request, LOGIN_TEMPLATE)
              
         import requests
-        r = requests.post('https://www.google.com/recaptcha/api/siteverify', data={
-            'secret': settings.RECAPTCHA_PRIVATE_KEY,
-            'response': recaptcha_response
-        })
-        if not r.json().get('success'):
-             messages.error(request, 'reCAPTCHA verification failed. Please try again.')
-             return render(request, LOGIN_TEMPLATE)
+        try:
+            r = requests.post('https://www.google.com/recaptcha/api/siteverify', data={
+                'secret': settings.RECAPTCHA_PRIVATE_KEY,
+                'response': recaptcha_response
+            }, timeout=5)
+            if not r.json().get('success'):
+                 messages.error(request, 'reCAPTCHA verification failed. Please try again.')
+                 return render(request, LOGIN_TEMPLATE)
+        except Exception as e:
+            # Fallback for network issues or API down
+            if settings.DEBUG:
+                messages.warning(request, f'reCAPTCHA error: {e}. Skipping check for Dev.')
+            else:
+                messages.error(request, 'reCAPTCHA service unavailable. Please try later.')
+                return render(request, LOGIN_TEMPLATE)
 
         # 2. Basic Rate Limiting / Lock Check
         user_candidate = User.objects.filter(username=email).first() or User.objects.filter(email=email).first()
@@ -253,7 +268,7 @@ def verify_otp_view(request):
             
             request.session.pop('pending_otp_token', None)
             response = redirect('dashboard')
-            response.set_cookie('access_token', final_token, httponly=True, secure=True)
+            response.set_cookie('access_token', final_token, httponly=True, secure=settings.SESSION_COOKIE_SECURE)
             return response
         else:
             messages.error(request, 'Invalid or expired OTP')
@@ -285,7 +300,7 @@ def staff_login_view(request):
                 token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
                 messages.success(request, f"Welcome back, {staff_name}!")
                 response = redirect('dashboard')
-                response.set_cookie('access_token', token, httponly=True, secure=True)
+                response.set_cookie('access_token', token, httponly=True, secure=settings.SESSION_COOKIE_SECURE)
                 return response
             
         messages.error(request, 'Invalid Shop Email, Staff Name, or PIN.')
@@ -492,29 +507,79 @@ def reset_data(request):
 
 def forgot_password_view(request):
     if request.method == 'POST':
-        email = request.POST.get('email')
+        email = request.POST.get('email', '').strip()
         user = User.objects.filter(email=email).first() or User.objects.filter(username=email).first()
+        
         if user:
             otp = ''.join(random.choices(string.digits, k=6))
             user.otp_code = otp
             user.otp_expiry = timezone.now() + timedelta(minutes=15)
             user.save()
+            
             request.session['reset_email'] = user.email
-            send_mail('Reset OTP', f'Code: {otp}', settings.DEFAULT_FROM_EMAIL, [user.email])
-            messages.success(request, 'OTP sent.')
-            return redirect('reset_password')
+            
+            try:
+                send_mail(
+                    'Password Reset OTP',
+                    f'Your verification code is: {otp}. It will expire in 15 minutes.',
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+                messages.success(request, 'Verification code sent to your email.')
+                return redirect('reset_password')
+            except Exception as e:
+                if settings.DEBUG:
+                    messages.warning(request, f"Email failed. Code: {otp}. Error: {e}")
+                else:
+                    messages.error(request, 'Failed to send verification email. Please try again.')
+        else:
+            messages.error(request, 'Account not found.')
+            
     return render(request, 'forgot_password.html')
 
 def reset_password_view(request):
     if request.method == 'POST':
-        otp, pwd, conf = request.POST.get('otp'), request.POST.get('password'), request.POST.get('confirm_password')
+        otp = request.POST.get('otp', '').strip()
+        pwd = request.POST.get('password', '')
+        conf = request.POST.get('confirm_password', '')
         email = request.session.get('reset_email')
-        user = User.objects.filter(email=email).first() if email else None
-        if user and user.otp_code == otp and pwd == conf:
-            user.set_password(pwd)
-            user.otp_code = None
-            user.save()
-            return redirect('login')
+        
+        if not email:
+            messages.error(request, 'Session expired. Please start again.')
+            return redirect('forgot_password')
+            
+        user = User.objects.filter(email=email).first()
+        
+        if not user or not user.otp_code:
+            messages.error(request, 'Invalid request.')
+            return redirect('forgot_password')
+            
+        if user.otp_code != otp:
+            messages.error(request, 'Incorrect verification code.')
+            return render(request, 'reset_password.html')
+            
+        if timezone.now() > user.otp_expiry:
+            messages.error(request, 'Verification code expired.')
+            return redirect('forgot_password')
+            
+        if pwd != conf:
+            messages.error(request, 'Passwords do not match.')
+            return render(request, 'reset_password.html')
+            
+        if len(pwd) < 8:
+            messages.error(request, 'Password must be at least 8 characters.')
+            return render(request, 'reset_password.html')
+            
+        user.set_password(pwd)
+        user.otp_code = None
+        user.otp_expiry = None
+        user.save()
+        
+        request.session.pop('reset_email', None)
+        messages.success(request, 'Password reset successful! Please sign in.')
+        return redirect('login')
+        
     return render(request, 'reset_password.html')
 
 @login_required

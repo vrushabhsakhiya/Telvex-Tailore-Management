@@ -32,8 +32,8 @@ class JWTSessionMiddleware:
                 request.staff_name = payload.get('staff_name')
                 request.staff_role = payload.get('staff_role')
                 
-            except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-                # Token crashed or expired
+            except Exception:
+                # Token crashed, expired, or other JWT-related error
                 logout(request)
                 response = redirect('login')
                 response.delete_cookie('access_token')
