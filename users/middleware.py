@@ -16,6 +16,9 @@ class JWTSessionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if request.path.startswith('/admin/'):
+            return self.get_response(request)
+
         if request.user.is_authenticated:
             token = request.COOKIES.get('access_token')
             
