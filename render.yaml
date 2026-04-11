@@ -3,7 +3,7 @@ services:
     name: talvex-management
     env: python
     buildCommand: ./build.sh
-    startCommand: gunicorn config.wsgi:application --workers 2 --threads 4 --timeout 120
+    startCommand: gunicorn config.wsgi:application --workers 2 --threads 2 --timeout 120 --keep-alive 5
     healthCheckPath: /heartbeat/
     envVars:
       - key: DATABASE_URL

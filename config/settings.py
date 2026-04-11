@@ -96,16 +96,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
     "default": dj_database_url.config(
         default=os.getenv("DATABASE_URL"),
-        conn_max_age=600,
-        ssl_require=not DEBUG # Only require SSL in production (DEBUG=False)
+        conn_max_age=0, # Disable persistent connections to avoid SSL 'bad record mac' on Render
+        ssl_require=not DEBUG
     )
 }
 
-# Keep 'main' alias for multi-tenant router compatibility
-DATABASES['main'] = DATABASES['default']
+# Use a deep copy to ensure 'main' has its own connection pool, avoiding SSL corruption
+import copy
+DATABASES['main'] = copy.deepcopy(DATABASES['default'])
 
 # Database router for multi-tenancy (simplified for single database)
 DATABASE_ROUTERS = ['config.db_router.MultiTenantRouter']
