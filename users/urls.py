@@ -19,4 +19,5 @@ urlpatterns = [
     path('settings/staff/delete/<str:staff_name>/', views.delete_staff, name='delete_staff'),
     path('pending-approval/', views.pending_approval_view, name='pending_approval'),
     path('heartbeat/', views.heartbeat, name='heartbeat'),
+    path('diag/', views.diag_view, name='diag'),
 ]

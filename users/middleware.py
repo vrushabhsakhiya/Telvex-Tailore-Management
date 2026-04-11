@@ -117,3 +117,26 @@ class ShopApprovalMiddleware:
                 pass
 
         return self.get_response(request)
+
+import logging
+import traceback
+
+class ExceptionLoggingMiddleware:
+    """
+    Middleware to log full tracebacks for Internal Server Errors (500)
+    so they appear in the Render dashboard logs.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.logger = logging.getLogger('django.request')
+
+    def __call__(self, request):
+        try:
+            return self.get_response(request)
+        except Exception as e:
+            # Capture the full traceback
+            tb = traceback.format_exc()
+            self.logger.critical(f"INTERNAL SERVER ERROR (500): {request.path}\n{tb}")
+            
+            # Re-raise so Django still handles the secondary responses (like custom 500 page)
+            raise e

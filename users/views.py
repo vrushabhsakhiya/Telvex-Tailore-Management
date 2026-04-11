@@ -612,6 +612,68 @@ def reset_password_view(request):
         
     return render(request, 'reset_password.html', {'hide_marketing_sidebar': True})
 
+from django.db import connection, DatabaseError
+from django.db.utils import OperationalError
+
+def diag_view(request):
+    """Diagnostic view to check system health on Render."""
+    health = {
+        'status': 'HEALTHY',
+        'database': 'OK',
+        'tables': 'OK',
+        'migrations_pending': 'NO',
+        'details': []
+    }
+    
+    # 1. Check DB Connection
+    try:
+        connection.ensure_connection()
+    except OperationalError as e:
+        health['database'] = 'FAIL'
+        health['status'] = 'UNHEALTHY'
+        health['details'].append(f"DB Connection Error: {str(e)}")
+    except Exception as e:
+        health['database'] = 'ERROR'
+        health['details'].append(f"Unexpected DB Error: {str(e)}")
+
+    # 2. Check for key tables (User)
+    if health['database'] == 'OK':
+        try:
+            from django.contrib.auth import get_user_model
+            U = get_user_model()
+            U.objects.all().count() # Trigger a query
+        except DatabaseError as e:
+            health['tables'] = 'FAIL'
+            health['status'] = 'UNHEALTHY'
+            health['details'].append(f"Table Error (Maybe missing migrations?): {str(e)}")
+        except Exception as e:
+            health['tables'] = 'ERROR'
+            health['details'].append(f"Unexpected Table Error: {str(e)}")
+
+    # 3. Check for specific ShopProfile table (often causes 500s)
+    if health['tables'] == 'OK':
+        try:
+            from .models import ShopProfile
+            ShopProfile.objects.all().count()
+        except DatabaseError:
+            health['details'].append("Warning: ShopProfile table missing or inaccessible.")
+            health['status'] = 'UNHEALTHY'
+
+    # Simplified response for the user
+    response_html = f"<h1>System Diagnostic</h1>"
+    response_html += f"<p><b>Status:</b> {health['status']}</p>"
+    response_html += f"<ul>"
+    response_html += f"<li>Database: {health['database']}</li>"
+    response_html += f"<li>Tables: {health['tables']}</li>"
+    response_html += f"</ul>"
+    
+    if health['details']:
+        response_html += "<h3>Errors/Warnings:</h3><pre>" + "\n".join(health['details']) + "</pre>"
+    
+    response_html += "<hr><p>Try visiting <a href='/login/'>Login</a> after fixing issues.</p>"
+    
+    return HttpResponse(response_html)
+
 def heartbeat(request):
     """Simple heartbeat view for uptime monitoring (prevent Render cold starts)."""
     return HttpResponse("OK", status=200)
