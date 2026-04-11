@@ -59,11 +59,14 @@ def register_view(request):
             r = requests.post('https://www.google.com/recaptcha/api/siteverify', data={
                 'secret': settings.RECAPTCHA_PRIVATE_KEY,
                 'response': recaptcha_response
-            }, timeout=5)
+            }, timeout=4) # Tightened timeout
             result = r.json()
             if not result.get('success'):
                  messages.error(request, 'reCAPTCHA verification failed. Please try again.')
                  return redirect('register')
+        except requests.exceptions.Timeout:
+            messages.error(request, 'reCAPTCHA service timed out. Please try again.')
+            return redirect('register')
         except Exception as e:
             # Fallback for network issues or API down
             if settings.DEBUG:
@@ -144,10 +147,13 @@ def login_view(request):
             r = requests.post('https://www.google.com/recaptcha/api/siteverify', data={
                 'secret': settings.RECAPTCHA_PRIVATE_KEY,
                 'response': recaptcha_response
-            }, timeout=5)
+            }, timeout=4) # Tightened timeout
             if not r.json().get('success'):
                  messages.error(request, 'reCAPTCHA verification failed. Please try again.')
                  return render(request, LOGIN_TEMPLATE)
+        except requests.exceptions.Timeout:
+             messages.error(request, 'reCAPTCHA service timed out. Please try again.')
+             return render(request, LOGIN_TEMPLATE)
         except Exception as e:
             # Fallback for network issues or API down
             if settings.DEBUG:
@@ -199,6 +205,7 @@ def login_view(request):
             """
             
             try:
+                # Use a try-except for email to prevent 500 errors on Render if SMTP is wrong/slow
                 send_mail(
                     subject='Login OTP - Telvex',
                     message=f'Your login OTP is: {otp}. It expires in 10 minutes.',
@@ -209,10 +216,16 @@ def login_view(request):
                 )
                 messages.info(request, f'OTP sent to your email: {user.email}')
             except Exception as e:
+                # Clear the OTP since it wasn't sent
+                user.otp_code = None
+                user.save()
+                
                 if settings.DEBUG:
                     messages.warning(request, f'Email delivery failed. Dev OTP: {otp}. Error: {str(e)}')
                 else:
-                    messages.error(request, 'Failed to send OTP. Please contact support.')
+                    messages.error(request, 'SMTP Error: Failed to send OTP email. Please ensure your email settings are correct on Render.')
+                    # Log the actual error for the developer if possible, but don't crash the request
+                    print(f"CRITICAL: SMTP Failure: {e}")
                     return redirect('login')
 
             request.session['pending_otp_token'] = temp_token
@@ -535,7 +548,9 @@ def forgot_password_view(request):
                 if settings.DEBUG:
                     messages.warning(request, f"Email failed. Code: {otp}. Error: {e}")
                 else:
-                    messages.error(request, 'Failed to send verification email. Please try again.')
+                    messages.error(request, 'Failed to send verification email. Please check your Render environment variables.')
+                    print(f"CRITICAL: Password Reset SMTP Failure: {e}")
+                    return redirect('forgot_password')
         else:
             messages.error(request, 'Account not found.')
             
