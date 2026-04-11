@@ -28,6 +28,10 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
+# NEW: Allow forced debug mode via Render environment variables for troubleshooting
+IF_RENDER_DEBUG = os.getenv("RENDER_DEBUG", "False") == "True"
+if IF_RENDER_DEBUG:
+    DEBUG = True
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "telvex-tailore-management.onrender.com,localhost,127.0.0.1").split(",")
 
@@ -56,6 +60,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'users.middleware.ExceptionLoggingMiddleware', # Catch everything from this point down
     'users.middleware.SecurityBlockingMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -67,7 +72,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'users.middleware.JWTSessionMiddleware',
     'users.middleware.ShopApprovalMiddleware',
-    'users.middleware.ExceptionLoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
