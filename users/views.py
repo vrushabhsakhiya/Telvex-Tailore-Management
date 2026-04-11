@@ -145,22 +145,45 @@ def login_view(request):
                  
             import requests
             try:
+                # 1a. Ensure keys exist to avoid crashes
+                private_key = getattr(settings, 'RECAPTCHA_PRIVATE_KEY', None)
+                if not private_key:
+                    messages.error(request, 'System Error: reCAPTCHA_PRIVATE_KEY is missing on Render. Please add it to environment variables.')
+                    return render(request, LOGIN_TEMPLATE)
+
+                # 1b. Call Google API with timeout
                 r = requests.post('https://www.google.com/recaptcha/api/siteverify', data={
-                    'secret': settings.RECAPTCHA_PRIVATE_KEY,
+                    'secret': private_key,
                     'response': recaptcha_response
-                }, timeout=4) # Tightened timeout
-                if not r.json().get('success'):
-                     messages.error(request, 'reCAPTCHA verification failed. Please try again.')
+                }, timeout=5)
+                
+                # 1c. Safe JSON parsing
+                try:
+                    result = r.json()
+                except Exception:
+                    messages.error(request, f'JSON Parse Error: Google returned invalid data (Status: {r.status_code})')
+                    return render(request, LOGIN_TEMPLATE)
+
+                # 1d. Check Success
+                if not result.get('success'):
+                     error_codes = result.get('error-codes', [])
+                     print(f"RECAPTCHA_FAILURE_DETAILS: {error_codes}")
+                     # "invalid-site-private-key" is the most common reason for Render 500s
+                     if 'invalid-input-secret' in error_codes:
+                         messages.error(request, 'reCAPTCHA Error: The Secret Key is invalid. Please check Render Environment variables.')
+                     else:
+                         messages.error(request, f"reCAPTCHA failed. Details: {', '.join(error_codes)}")
                      return render(request, LOGIN_TEMPLATE)
             except requests.exceptions.Timeout:
-                 messages.error(request, 'reCAPTCHA service timed out. Please try again.')
+                 messages.error(request, 'reCAPTCHA service timed out. Google is slow, please try again.')
                  return render(request, LOGIN_TEMPLATE)
             except Exception as e:
-                # Fallback for network issues or API down
+                # If everything fails, log it and inform the user
                 if settings.DEBUG:
-                    messages.warning(request, f'reCAPTCHA error: {e}. Skipping check for Dev.')
+                    messages.warning(request, f'reCAPTCHA exception (DEBUG=True): {e}')
                 else:
-                    messages.error(request, 'reCAPTCHA service unavailable. Please try later.')
+                    messages.error(request, f'Critical reCAPTCHA error: {str(e)}')
+                    print(f"CRITICAL RECAPTCHA: {e}")
                     return render(request, LOGIN_TEMPLATE)
 
             # 2. Basic Rate Limiting / Lock Check
