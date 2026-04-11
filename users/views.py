@@ -271,11 +271,13 @@ def login_view(request):
         # ABSOLUTE FALLBACK: Catch all errors to diagnose the 500 crash
         import traceback
         error_details = traceback.format_exc()
-        if settings.DEBUG:
-            return HttpResponse(f"LOGIN ERROR DIAGNOSTIC:<br><pre>{error_details}</pre>", status=500)
+        
+        # EMERGENCY OVERRIDE: If ?debug=1 is in URL, show the error even in production
+        if request.GET.get('debug') == '1' or settings.DEBUG:
+            return HttpResponse(f"<h1>EMERGENCY DEBUG MODE</h1><p>Error: {str(e)}</p><pre>{error_details}</pre>", status=500)
         else:
             # On production, show a specific error message instead of a generic 500
-            messages.error(request, f"Critical System Error: {str(e)}. Please check your Render logs or environment variables.")
+            messages.error(request, f"Critical System Error. Please check your Render logs or try adding ?debug=1 to the URL to see the cause.")
             print(f"CRITICAL LOGIN 500: {error_details}")
             return render(request, LOGIN_TEMPLATE)
 

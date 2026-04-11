@@ -138,5 +138,18 @@ class ExceptionLoggingMiddleware:
             tb = traceback.format_exc()
             self.logger.critical(f"INTERNAL SERVER ERROR (500): {request.path}\n{tb}")
             
-            # Re-raise so Django still handles the secondary responses (like custom 500 page)
+            # EMERGENCY BROWSER DEBUG OVERRIDE
+            if request.GET.get('debug') == '1':
+                from django.http import HttpResponse
+                debug_html = f"""
+                <div style="background: #fee2e2; border: 2px solid #ef4444; padding: 20px; font-family: monospace;">
+                    <h1 style="color: #b91c1c;">Universal Debugger Output</h1>
+                    <p><b>Error:</b> {str(e)}</p>
+                    <hr>
+                    <pre style="background: #111; color: #10b981; padding: 15px; border-radius: 8px; overflow-x: auto;">{tb}</pre>
+                </div>
+                """
+                return HttpResponse(debug_html, status=500)
+
+            # Re-raise so Django still handles the secondary responses
             raise e
