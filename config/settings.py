@@ -196,7 +196,9 @@ if not DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         'https://*.vercel.app',
         'https://' + os.environ.get('VERCEL_URL', ''),
-        'https://telvex-tailore-management.onrender.com'
+        'https://telvex-tailore-management.onrender.com',
+        'https://telvex-tailore-management.onrender.com/',
+        'http://telvex-tailore-management.onrender.com'
     ]
     
     # HSTS Settings
@@ -236,12 +238,12 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
-            'propagate': False,
+            'propagate': True,
         },
         'django.request': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'DEBUG',
             'propagate': False,
         },
