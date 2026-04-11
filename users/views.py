@@ -123,126 +123,138 @@ def register_view(request):
     return render(request, 'register.html', {'hide_marketing_sidebar': True})
 
 def login_view(request):
-    if request.method == 'POST':
-        email = request.POST.get('username') # Form uses 'username' name for email input
-        password = request.POST.get('password')
-        
-        # 0. IP Rate Limiting (Brute Force Protection)
-        ip = request.META.get('REMOTE_ADDR')
-        cache_key = f'ratelimit_login_{ip}'
-        attempts = cache.get(cache_key, 0)
-        if attempts >= 10: # Max 10 attempts per IP per 5 mins
-             messages.error(request, 'Too many failed login attempts from this network. Please wait.')
-             return render(request, LOGIN_TEMPLATE)
-        cache.set(cache_key, attempts + 1, 300)
-
-        # 1. reCAPTCHA Validation
-        recaptcha_response = request.POST.get('g-recaptcha-response')
-        if not recaptcha_response:
-             messages.error(request, 'Please complete the reCAPTCHA.')
-             return render(request, LOGIN_TEMPLATE)
-             
-        import requests
-        try:
-            r = requests.post('https://www.google.com/recaptcha/api/siteverify', data={
-                'secret': settings.RECAPTCHA_PRIVATE_KEY,
-                'response': recaptcha_response
-            }, timeout=4) # Tightened timeout
-            if not r.json().get('success'):
-                 messages.error(request, 'reCAPTCHA verification failed. Please try again.')
+    try:
+        if request.method == 'POST':
+            email = request.POST.get('username') # Form uses 'username' name for email input
+            password = request.POST.get('password')
+            
+            # 0. IP Rate Limiting (Brute Force Protection)
+            ip = request.META.get('REMOTE_ADDR')
+            cache_key = f'ratelimit_login_{ip}'
+            attempts = cache.get(cache_key, 0)
+            if attempts >= 10: # Max 10 attempts per IP per 5 mins
+                 messages.error(request, 'Too many failed login attempts from this network. Please wait.')
                  return render(request, LOGIN_TEMPLATE)
-        except requests.exceptions.Timeout:
-             messages.error(request, 'reCAPTCHA service timed out. Please try again.')
-             return render(request, LOGIN_TEMPLATE)
-        except Exception as e:
-            # Fallback for network issues or API down
-            if settings.DEBUG:
-                messages.warning(request, f'reCAPTCHA error: {e}. Skipping check for Dev.')
-            else:
-                messages.error(request, 'reCAPTCHA service unavailable. Please try later.')
+            cache.set(cache_key, attempts + 1, 300)
+
+            # 1. reCAPTCHA Validation
+            recaptcha_response = request.POST.get('g-recaptcha-response')
+            if not recaptcha_response:
+                 messages.error(request, 'Please complete the reCAPTCHA.')
+                 return render(request, LOGIN_TEMPLATE)
+                 
+            import requests
+            try:
+                r = requests.post('https://www.google.com/recaptcha/api/siteverify', data={
+                    'secret': settings.RECAPTCHA_PRIVATE_KEY,
+                    'response': recaptcha_response
+                }, timeout=4) # Tightened timeout
+                if not r.json().get('success'):
+                     messages.error(request, 'reCAPTCHA verification failed. Please try again.')
+                     return render(request, LOGIN_TEMPLATE)
+            except requests.exceptions.Timeout:
+                 messages.error(request, 'reCAPTCHA service timed out. Please try again.')
+                 return render(request, LOGIN_TEMPLATE)
+            except Exception as e:
+                # Fallback for network issues or API down
+                if settings.DEBUG:
+                    messages.warning(request, f'reCAPTCHA error: {e}. Skipping check for Dev.')
+                else:
+                    messages.error(request, 'reCAPTCHA service unavailable. Please try later.')
+                    return render(request, LOGIN_TEMPLATE)
+
+            # 2. Basic Rate Limiting / Lock Check
+            user_candidate = User.objects.filter(username=email).first() or User.objects.filter(email=email).first()
+            if user_candidate and user_candidate.locked_until and user_candidate.locked_until > timezone.now():
+                messages.error(request, 'Account locked due to multiple failed attempts. Please try again later.')
                 return render(request, LOGIN_TEMPLATE)
 
-        # 2. Basic Rate Limiting / Lock Check
-        user_candidate = User.objects.filter(username=email).first() or User.objects.filter(email=email).first()
-        if user_candidate and user_candidate.locked_until and user_candidate.locked_until > timezone.now():
-            messages.error(request, 'Account locked due to multiple failed attempts. Please try again later.')
-            return render(request, LOGIN_TEMPLATE)
-
-        user = authenticate(request, username=email, password=password)
-        
-        if user is not None:
-            # Success! Reset failure count
-            user.failed_attempts = 0
-            user.locked_until = None
+            user = authenticate(request, username=email, password=password)
             
-            # Start 2FA Flow
-            otp = ''.join(random.choices(string.digits, k=6))
-            user.otp_code = otp
-            user.otp_expiry = timezone.now() + timedelta(minutes=10)
-            user.save()
-
-            # Generate JWT for temporary 2FA session
-            payload = {
-                'user_id': user.id,
-                'exp': int(time.time()) + 600, # 10 minutes
-                'type': '2fa_pending'
-            }
-            temp_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
-
-            # Send OTP via Email (Real Email Sending)
-            email_html = f"""
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #6366f1; text-align: center;">Teivex Security</h2>
-                <p>Hello,</p>
-                <p>You requested a login OTP for your Teivex account. Please use the code below to complete your login:</p>
-                <div style="background: #f1f5f9; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #1e293b; border-radius: 8px; margin: 20px 0;">
-                    {otp}
-                </div>
-                <p style="color: #64748b; font-size: 14px;">This code will expire in 10 minutes. If you did not request this, please ignore this email or contact support.</p>
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; {timezone.now().year} Telvex. All rights reserved.</p>
-            </div>
-            """
-            
-            try:
-                # Use a try-except for email to prevent 500 errors on Render if SMTP is wrong/slow
-                send_mail(
-                    subject='Login OTP - Telvex',
-                    message=f'Your login OTP is: {otp}. It expires in 10 minutes.',
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                    html_message=email_html,
-                    fail_silently=False,
-                )
-                messages.info(request, f'OTP sent to your email: {user.email}')
-            except Exception as e:
-                # Clear the OTP since it wasn't sent
-                user.otp_code = None
-                user.save()
+            if user is not None:
+                # Success! Reset failure count
+                user.failed_attempts = 0
+                user.locked_until = None
                 
-                if settings.DEBUG:
-                    messages.warning(request, f'Email delivery failed. Dev OTP: {otp}. Error: {str(e)}')
-                else:
-                    messages.error(request, 'SMTP Error: Failed to send OTP email. Please ensure your email settings are correct on Render.')
-                    # Log the actual error for the developer if possible, but don't crash the request
-                    print(f"CRITICAL: SMTP Failure: {e}")
-                    return redirect('login')
+                # Start 2FA Flow
+                otp = ''.join(random.choices(string.digits, k=6))
+                user.otp_code = otp
+                user.otp_expiry = timezone.now() + timedelta(minutes=10)
+                user.save()
 
-            request.session['pending_otp_token'] = temp_token
-            return redirect('verify_otp')
-        else:
-            if user_candidate:
-                user_candidate.failed_attempts += 1
-                if user_candidate.failed_attempts >= 5:
-                    user_candidate.locked_until = timezone.now() + timedelta(minutes=5)
-                    messages.error(request, 'Too many failed attempts. Account locked for 5 minutes.')
-                else:
-                    messages.error(request, f'Invalid credentials. {5 - user_candidate.failed_attempts} attempts remaining.')
-                user_candidate.save()
+                # Generate JWT for temporary 2FA session
+                payload = {
+                    'user_id': user.id,
+                    'exp': int(time.time()) + 600, # 10 minutes
+                    'type': '2fa_pending'
+                }
+                temp_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+
+                # Send OTP via Email (Real Email Sending)
+                email_html = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #6366f1; text-align: center;">Teivex Security</h2>
+                    <p>Hello,</p>
+                    <p>You requested a login OTP for your Teivex account. Please use the code below to complete your login:</p>
+                    <div style="background: #f1f5f9; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #1e293b; border-radius: 8px; margin: 20px 0;">
+                        {otp}
+                    </div>
+                    <p style="color: #64748b; font-size: 14px;">This code will expire in 10 minutes. If you did not request this, please ignore this email or contact support.</p>
+                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="text-align: center; color: #94a3b8; font-size: 12px;">&copy; {timezone.now().year} Telvex. All rights reserved.</p>
+                </div>
+                """
+                
+                try:
+                    # Use a try-except for email to prevent 500 errors on Render if SMTP is wrong/slow
+                    send_mail(
+                        subject='Login OTP - Telvex',
+                        message=f'Your login OTP is: {otp}. It expires in 10 minutes.',
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[user.email],
+                        html_message=email_html,
+                        fail_silently=False,
+                    )
+                    messages.info(request, f'OTP sent to your email: {user.email}')
+                except Exception as e:
+                    # Clear the OTP since it wasn't sent
+                    user.otp_code = None
+                    user.save()
+                    
+                    if settings.DEBUG:
+                        messages.warning(request, f'Email delivery failed. Dev OTP: {otp}. Error: {str(e)}')
+                    else:
+                        messages.error(request, 'SMTP Error: Failed to send OTP email. Please ensure your email settings are correct on Render.')
+                        # Log the actual error for the developer if possible, but don't crash the request
+                        print(f"CRITICAL: SMTP Failure: {e}")
+                        return redirect('login')
+
+                request.session['pending_otp_token'] = temp_token
+                return redirect('verify_otp')
             else:
-                messages.error(request, 'Invalid email or password')
-    
-    return render(request, LOGIN_TEMPLATE)
+                if user_candidate:
+                    user_candidate.failed_attempts += 1
+                    if user_candidate.failed_attempts >= 5:
+                        user_candidate.locked_until = timezone.now() + timedelta(minutes=5)
+                        messages.error(request, 'Too many failed attempts. Account locked for 5 minutes.')
+                    else:
+                        messages.error(request, f'Invalid credentials. {5 - user_candidate.failed_attempts} attempts remaining.')
+                    user_candidate.save()
+                else:
+                    messages.error(request, 'Invalid email or password')
+        
+        return render(request, LOGIN_TEMPLATE)
+    except Exception as e:
+        # ABSOLUTE FALLBACK: Catch all errors to diagnose the 500 crash
+        import traceback
+        error_details = traceback.format_exc()
+        if settings.DEBUG:
+            return HttpResponse(f"LOGIN ERROR DIAGNOSTIC:<br><pre>{error_details}</pre>", status=500)
+        else:
+            # On production, show a specific error message instead of a generic 500
+            messages.error(request, f"Critical System Error: {str(e)}. Please check your Render logs or environment variables.")
+            print(f"CRITICAL LOGIN 500: {error_details}")
+            return render(request, LOGIN_TEMPLATE)
 
 def verify_otp_view(request):
     token = request.session.get('pending_otp_token')
