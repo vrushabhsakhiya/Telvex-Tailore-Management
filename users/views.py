@@ -713,6 +713,24 @@ def diag_view(request):
     
     return HttpResponse(response_html)
 
+def log_diag_view(request):
+    """Emergency view to read /tmp/django_error.log for remote troubleshooting."""
+    log_path = '/tmp/django_error.log'
+    if not os.path.exists(log_path):
+        return HttpResponse("<h1>Log Diagnostic</h1><p>No log file found yet. Please try to log in first to trigger an error!</p>")
+    
+    try:
+        with open(log_path, 'r') as f:
+            # Read last 2000 chars to avoid memory issues
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            f.seek(max(0, size - 10000))
+            content = f.read()
+        
+        return HttpResponse(f"<h1>Application Logs (Last 10KB)</h1><pre>{content}</pre><hr><p><a href='/log-diag/'>Refresh</a></p>")
+    except Exception as e:
+        return HttpResponse(f"<h1>Log Error</h1><p>Could not read log file: {str(e)}</p>")
+
 def heartbeat(request):
     """Simple heartbeat view for uptime monitoring (prevent Render cold starts)."""
     return HttpResponse("OK", status=200)

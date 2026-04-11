@@ -20,4 +20,5 @@ urlpatterns = [
     path('pending-approval/', views.pending_approval_view, name='pending_approval'),
     path('heartbeat/', views.heartbeat, name='heartbeat'),
     path('diag/', views.diag_view, name='diag'),
+    path('log-diag/', views.log_diag_view, name='log_diag'),
 ]
