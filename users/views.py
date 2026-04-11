@@ -673,7 +673,21 @@ def diag_view(request):
             health['tables'] = 'ERROR'
             health['details'].append(f"Unexpected Table Error: {str(e)}")
 
-    # 3. Check for specific ShopProfile table (often causes 500s)
+    # 3. Check for database WRITE permissions
+    if health['tables'] == 'OK':
+        try:
+            from django.contrib.sessions.models import Session
+            import uuid
+            # Attempt to create a dummy session record (Write Test)
+            test_session = Session(session_key=str(uuid.uuid4())[:32], expire_date=timezone.now())
+            test_session.save()
+            test_session.delete() # Clean up
+            health['details'].append("Database Write Test: SUCCESS")
+        except Exception as e:
+            health['status'] = 'UNHEALTHY'
+            health['details'].append(f"Database Write Test: FAIL (Possible permission issue): {str(e)}")
+
+    # 4. Check for specific ShopProfile table
     if health['tables'] == 'OK':
         try:
             from .models import ShopProfile
