@@ -169,23 +169,30 @@
 </div>
 {% endif %}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const ctx = document.getElementById('revenueChart').getContext('2d');
-        const revenueChart = new Chart(ctx, {
+        const ctx = document.getElementById('revenueChart');
+        if (!ctx) return;
+        
+        const labels = [{% for entry in revenue_trend %}'{{ entry.month|date:"M Y" }}',{% endfor %}];
+        const dataValues = [{% for entry in revenue_trend %}{{ entry.total|default:0|stringformat:".2f" }},{% endfor %}];
+        
+        console.log("Chart Labels:", labels);
+        console.log("Chart Data:", dataValues);
+
+        const revenueChart = new Chart(ctx.getContext('2d'), {
             type: 'line',
             data: {
-                labels: [{% for entry in revenue_trend %}'{{ entry.month|date:"M Y" }}',{% endfor %}],
+                labels: labels,
                 datasets: [{
                     label: 'Revenue',
-                    data: [{% for entry in revenue_trend %}{{ entry.total }},{% endfor %}],
+                    data: dataValues,
                     borderColor: '#6366f1',
                     backgroundColor: 'rgba(99, 102, 241, 0.1)',
                     fill: true,
                     tension: 0.4,
                     borderWidth: 4,
-                    pointRadius: 0,
+                    pointRadius: labels.length === 1 ? 6 : 0, // Show point if only one data point
                     pointHitRadius: 10,
                     pointHoverRadius: 6,
                     pointHoverBackgroundColor: '#6366f1',
@@ -200,8 +207,8 @@
                     legend: { display: false },
                     tooltip: {
                         backgroundColor: '#0f172a',
-                        titleFont: { family: 'Outfit', size: 13 },
-                        bodyFont: { family: 'Outfit', size: 14, weight: 'bold' },
+                        titleFont: { family: 'Poppins', size: 13 },
+                        bodyFont: { family: 'Poppins', size: 14, weight: 'bold' },
                         padding: 12,
                         cornerRadius: 10,
                         displayColors: false,
@@ -215,14 +222,14 @@
                         beginAtZero: true,
                         grid: { color: 'rgba(0,0,0,0.03)', drawBorder: false },
                         ticks: { 
-                            font: { family: 'Outfit', size: 11 },
+                            font: { family: 'Poppins', size: 11 },
                             color: '#94a3b8',
                             callback: value => '₹' + value.toLocaleString() 
                         }
                     },
                     x: {
                         grid: { display: false },
-                        ticks: { font: { family: 'Outfit', size: 11 }, color: '#94a3b8' }
+                        ticks: { font: { family: 'Poppins', size: 11 }, color: '#94a3b8' }
                     }
                 }
             }
