@@ -43,7 +43,7 @@ def dashboard(request):
 
     # Advanced: Top Customers (Optimized: Removed N+1 Query)
     top_customers = Customer.objects.filter(user=user) \
-        .annotate(spend=Sum('order__total_amt')) \
+        .annotate(spend=Sum('orders__total_amt')) \
         .filter(spend__gt=0) \
         .order_by('-spend')[:5]
 
